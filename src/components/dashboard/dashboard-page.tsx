@@ -1,7 +1,9 @@
 'use client'
 
-import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents, pipelineStages, projects } from '@/lib/data'
+import { useState, useEffect, useCallback } from 'react'
+import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents, pipelineStages, projects, aiUsageMetrics, teamProductivity } from '@/lib/data'
 import { useAppStore } from '@/lib/store'
+import { useToast } from '@/hooks/use-toast'
 import {
   Users,
   DollarSign,
@@ -44,6 +46,12 @@ import {
   Moon,
   Coffee,
   Sunset,
+  RefreshCw,
+  Download,
+  Cpu,
+  Flame,
+  Star,
+  Inbox,
 } from 'lucide-react'
 import {
   Card,
@@ -58,6 +66,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import { motion } from 'framer-motion'
 import {
   AreaChart,
@@ -67,6 +76,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
 } from 'recharts'
 
 // ---------------------------------------------------------------------------
@@ -198,7 +209,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.45, ease: 'easeOut' as const },
   },
 }
 
@@ -245,6 +256,84 @@ function RevenueTooltip({
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard Skeleton
+// ---------------------------------------------------------------------------
+
+function DashboardSkeleton() {
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Welcome Banner Skeleton */}
+      <Skeleton className="h-28 w-full rounded-xl" />
+      {/* Quick Actions Skeleton */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+      {/* Toolbar Skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-12 rounded-md" />
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+      </div>
+      {/* KPI Cards Skeleton */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-36 rounded-xl" />
+        ))}
+      </div>
+      {/* Revenue + Funnel Skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Skeleton className="h-[350px] lg:col-span-2 rounded-xl" />
+        <Skeleton className="h-[350px] rounded-xl" />
+      </div>
+      {/* New Widgets Row Skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-[280px] rounded-xl" />
+        <Skeleton className="h-[280px] rounded-xl" />
+      </div>
+      {/* Pipeline + Deadlines Skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-[220px] rounded-xl" />
+        <Skeleton className="h-[220px] rounded-xl" />
+      </div>
+      {/* Activity + Agent Status Skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-[400px] rounded-xl" />
+        <Skeleton className="h-[400px] rounded-xl" />
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Empty State Component
+// ---------------------------------------------------------------------------
+
+function EmptyState({ icon: Icon, message, ctaLabel, onCta }: { icon: React.ComponentType<{ className?: string }>; message: string; ctaLabel?: string; onCta?: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="flex size-14 items-center justify-center rounded-full bg-muted mb-4">
+        <Icon className="size-6 text-muted-foreground" />
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">{message}</p>
+      {ctaLabel && onCta && (
+        <Button variant="outline" size="sm" onClick={onCta}>
+          {ctaLabel}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Welcome Banner
 // ---------------------------------------------------------------------------
 
@@ -256,9 +345,10 @@ function getGreeting() {
 }
 
 function WelcomeBanner() {
-  const { setActivePage } = useAppStore()
+  const { setActivePage, currentUser } = useAppStore()
   const { text: greeting, icon: GreetingIcon } = getGreeting()
   const activeAgents = aiAgents.filter((a) => a.status === 'active').length
+  const displayName = currentUser?.name?.split(' ')[0] || 'User'
 
   return (
     <motion.div variants={itemVariants}>
@@ -271,7 +361,7 @@ function WelcomeBanner() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-foreground">
-                  {greeting}, Alex
+                  {greeting}, {displayName}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   You have <span className="font-medium text-foreground">{activeAgents} AI agents</span> running and{' '}
@@ -329,6 +419,15 @@ const quickActions = [
 
 function QuickActions() {
   const { setActivePage } = useAppStore()
+  const { toast } = useToast()
+
+  const handleClick = (action: typeof quickActions[number]) => {
+    toast({
+      title: 'Navigating',
+      description: `Navigating to ${action.label}...`,
+    })
+    setActivePage(action.pageId)
+  }
 
   return (
     <motion.div variants={itemVariants}>
@@ -338,7 +437,7 @@ function QuickActions() {
           return (
             <motion.button
               key={action.label}
-              onClick={() => setActivePage(action.pageId)}
+              onClick={() => handleClick(action)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-colors ${action.color}`}
@@ -348,6 +447,82 @@ function QuickActions() {
             </motion.button>
           )
         })}
+      </div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard Toolbar
+// ---------------------------------------------------------------------------
+
+const timeRangeOptions = ['7D', '30D', '90D', '12M', 'YTD'] as const
+type TimeRange = typeof timeRangeOptions[number]
+
+function DashboardToolbar({
+  timeRange,
+  setTimeRange,
+  lastUpdatedMins,
+  onRefresh,
+  onExport,
+  isRefreshing,
+}: {
+  timeRange: TimeRange
+  setTimeRange: (r: TimeRange) => void
+  lastUpdatedMins: number
+  onRefresh: () => void
+  onExport: () => void
+  isRefreshing: boolean
+}) {
+  return (
+    <motion.div variants={itemVariants}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {timeRangeOptions.map((opt) => (
+            <Button
+              key={opt}
+              size="sm"
+              variant={timeRange === opt ? 'default' : 'outline'}
+              className={`h-7 px-2.5 text-xs ${
+                timeRange === opt
+                  ? 'bg-vf-emerald hover:bg-vf-emerald/90 text-white'
+                  : ''
+              }`}
+              onClick={() => setTimeRange(opt)}
+            >
+              {opt}
+            </Button>
+          ))}
+          {timeRange !== '30D' && (
+            <Badge variant="secondary" className="ml-1 text-[10px]">
+              Filtered: {timeRange}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8"
+            onClick={onExport}
+          >
+            <Download className="size-3.5" />
+            Export
+          </Button>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            Updated {lastUpdatedMins} min ago
+          </span>
+        </div>
       </div>
     </motion.div>
   )
@@ -513,7 +688,22 @@ function RevenueChart() {
 // ---------------------------------------------------------------------------
 
 function ConversionFunnel() {
-  const maxValue = conversionFunnel[0].value
+  const maxValue = conversionFunnel[0]?.value ?? 0
+
+  if (conversionFunnel.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Conversion Funnel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmptyState icon={Filter} message="No funnel data available" ctaLabel="Import Leads" />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
@@ -573,6 +763,21 @@ function PipelineSummary() {
   const { setActivePage } = useAppStore()
   const totalLeads = pipelineStages.reduce((sum, s) => sum + s.count, 0)
 
+  if (pipelineStages.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Deal Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmptyState icon={Filter} message="No pipeline data available" ctaLabel="Add Leads" onCta={() => setActivePage('crm')} />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
       <Card className="h-full py-0">
@@ -613,6 +818,147 @@ function PipelineSummary() {
                 <span className="text-[10px] text-muted-foreground">{stage.name}</span>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// AI Usage Metrics Widget
+// ---------------------------------------------------------------------------
+
+function AIUsageMetrics() {
+  const tokenPercent = Math.round((aiUsageMetrics.tokensUsed / aiUsageMetrics.tokensLimit) * 100)
+
+  return (
+    <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
+      <Card className="h-full py-0">
+        <CardHeader className="pb-2 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">AI Usage Metrics</CardTitle>
+              <CardDescription>Agent resource consumption</CardDescription>
+            </div>
+            <Badge variant="secondary" className="gap-1">
+              <Cpu className="size-3" />
+              {tokenPercent}% usage
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4 pt-0">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Tasks Today</p>
+              <p className="text-xl font-bold text-foreground">{aiUsageMetrics.tasksToday.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Cost This Month</p>
+              <p className="text-xl font-bold text-foreground">${aiUsageMetrics.costThisMonth.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Token Usage</span>
+              <span className="text-xs font-medium text-foreground">
+                {(aiUsageMetrics.tokensUsed / 1000000).toFixed(1)}M / {(aiUsageMetrics.tokensLimit / 1000000).toFixed(1)}M
+              </span>
+            </div>
+            <Progress value={tokenPercent} className="h-2" />
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-vf-violet/15 text-vf-violet">
+              <Bot className="size-3.5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Most Active Agent</p>
+              <p className="text-sm font-semibold text-foreground">{aiUsageMetrics.mostActiveAgent}</p>
+            </div>
+          </div>
+
+          {/* Mini bar chart for tasks by day */}
+          <div className="h-14 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={aiUsageMetrics.tasksByDay} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <Bar dataKey="tasks" fill="var(--color-vf-violet)" radius={[2, 2, 0, 0]} opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Team Productivity Widget
+// ---------------------------------------------------------------------------
+
+function TeamProductivityWidget() {
+  const activePercent = Math.round((teamProductivity.activeToday / teamProductivity.totalMembers) * 100)
+
+  return (
+    <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
+      <Card className="h-full py-0">
+        <CardHeader className="pb-2 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Team Productivity</CardTitle>
+              <CardDescription>Team performance overview</CardDescription>
+            </div>
+            <Badge variant="secondary" className="gap-1">
+              <Users className="size-3" />
+              {teamProductivity.activeToday}/{teamProductivity.totalMembers} active
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4 pt-0">
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Active Today</p>
+              <p className="text-lg font-bold text-foreground">{teamProductivity.activeToday}/{teamProductivity.totalMembers}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Tasks Done</p>
+              <p className="text-lg font-bold text-foreground">{teamProductivity.tasksCompleted}</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Avg Response</p>
+              <p className="text-lg font-bold text-foreground">{teamProductivity.avgResponseTime}</p>
+            </div>
+          </div>
+
+          {/* Top performer */}
+          <div className="flex items-center gap-2 mb-4 rounded-xl border bg-vf-amber/5 p-3">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-vf-amber/15 text-vf-amber">
+              <Star className="size-4" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Top Performer</p>
+              <p className="text-sm font-semibold text-foreground">{teamProductivity.topPerformer}</p>
+            </div>
+            <Badge className="bg-vf-amber/15 text-vf-amber hover:bg-vf-amber/25 border-0">
+              {teamProductivity.topPerformerTasks} tasks
+            </Badge>
+          </div>
+
+          {/* Team activity bar */}
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Team Activity</span>
+            <span className="text-xs font-medium text-foreground">{activePercent}%</span>
+          </div>
+          <Progress value={activePercent} className="h-2 mb-3" />
+
+          {/* Mini bar chart for productivity by day */}
+          <div className="h-14 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={teamProductivity.productivityByDay} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <Bar dataKey="completed" fill="var(--color-vf-teal)" radius={[2, 2, 0, 0]} opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
@@ -671,37 +1017,38 @@ function ActivityFeed() {
           </div>
         </CardHeader>
         <CardContent className="pb-4 pt-0">
-          <ScrollArea className="h-[300px] pr-2">
-            <div className="space-y-1">
-              {filtered.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">No activity in this category</p>
-              )}
-              {filtered.map((activity) => {
-                const Icon = activityIconMap[activity.icon] ?? Activity
-                const borderColor = activityTypeColors[activity.type] ?? 'border-vf-emerald'
-                const iconBg = activityIconBgColors[activity.type] ?? 'bg-vf-emerald/15 text-vf-emerald'
+          {filtered.length === 0 ? (
+            <EmptyState icon={Inbox} message="No activity in this category" />
+          ) : (
+            <ScrollArea className="h-[300px] pr-2">
+              <div className="space-y-1">
+                {filtered.map((activity) => {
+                  const Icon = activityIconMap[activity.icon] ?? Activity
+                  const borderColor = activityTypeColors[activity.type] ?? 'border-vf-emerald'
+                  const iconBg = activityIconBgColors[activity.type] ?? 'bg-vf-emerald/15 text-vf-emerald'
 
-                return (
-                  <div
-                    key={activity.id}
-                    className={`flex items-start gap-3 rounded-lg border-l-2 ${borderColor} px-3 py-2.5 transition-colors hover:bg-muted/50`}
-                  >
+                  return (
                     <div
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
+                      key={activity.id}
+                      className={`flex items-start gap-3 rounded-lg border-l-2 ${borderColor} px-3 py-2.5 transition-colors hover:bg-muted/50`}
                     >
-                      <Icon className="size-4" />
+                      <div
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
+                      >
+                        <Icon className="size-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-snug text-foreground">
+                          {activity.description}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{activity.time}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-snug text-foreground">
-                        {activity.description}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{activity.time}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </ScrollArea>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
     </motion.div>
@@ -715,6 +1062,21 @@ function ActivityFeed() {
 function AgentStatus() {
   const { setActivePage } = useAppStore()
   const summaryAgents = aiAgents.slice(0, 8)
+
+  if (aiAgents.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">AI Agent Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmptyState icon={Bot} message="No AI agents configured" ctaLabel="Set Up Agents" onCta={() => setActivePage('agents')} />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
@@ -815,6 +1177,21 @@ function UpcomingDeadlines() {
     delivery: 'bg-vf-emerald/15 text-vf-emerald',
   }
 
+  if (projects.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Upcoming Deadlines</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmptyState icon={Calendar} message="No upcoming deadlines" ctaLabel="Create Project" onCta={() => setActivePage('projects')} />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
       <Card className="h-full py-0">
@@ -871,12 +1248,128 @@ function UpcomingDeadlines() {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: Export KPI data as CSV
+// ---------------------------------------------------------------------------
+
+function exportKPIsAsCSV(kpis: typeof dashboardKPIs) {
+  const header = 'Label,Value,Change,Trend,Icon'
+  const rows = kpis.map((kpi) =>
+    `${kpi.label},${kpi.value},${kpi.change},${kpi.trend},${kpi.icon}`
+  )
+  const csv = [header, ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'dashboard-kpis.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+// ---------------------------------------------------------------------------
 // Main Dashboard Page
 // ---------------------------------------------------------------------------
 
-import { useState } from 'react'
-
 export function DashboardPage() {
+  const { toast } = useToast()
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Time range filter
+  const [timeRange, setTimeRange] = useState<TimeRange>('30D')
+
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Last updated timestamp
+  const [lastUpdatedMins, setLastUpdatedMins] = useState(0)
+
+  // Live KPIs with simulated fluctuation
+  const [liveKPIs, setLiveKPIs] = useState(dashboardKPIs)
+
+  // Initial loading skeleton (1.5s)
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Auto-increment "last updated" minutes counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdatedMins((prev) => prev + 1)
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Live stats simulation - slightly randomize KPI values every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveKPIs((prev) =>
+        prev.map((kpi) => {
+          // Parse numeric value from the string
+          const numericMatch = kpi.value.match(/[\d,.]+/g)
+          if (!numericMatch) return kpi
+
+          const numericStr = numericMatch[0].replace(/,/g, '')
+          const numericVal = parseFloat(numericStr)
+          if (isNaN(numericVal)) return kpi
+
+          // Apply ±1-3% variation
+          const variation = 1 + (Math.random() * 0.06 - 0.03) // ±3%
+          const newVal = numericVal * variation
+          const prefix = kpi.value.match(/^[^0-9]*/)?.[0] ?? ''
+          const suffix = kpi.value.match(/[^0-9.]*$/)?.[0] ?? ''
+
+          // Format the new value
+          let formatted: string
+          if (Number.isInteger(numericVal) && !kpi.value.includes('.')) {
+            formatted = Math.round(newVal).toLocaleString()
+          } else {
+            formatted = newVal.toFixed(1)
+          }
+
+          return {
+            ...kpi,
+            value: `${prefix}${formatted}${suffix}`,
+          }
+        })
+      )
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Refresh handler
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    setLastUpdatedMins(0)
+    setTimeout(() => {
+      setIsRefreshing(false)
+      toast({
+        title: 'Dashboard refreshed',
+        description: 'Dashboard data refreshed successfully',
+      })
+    }, 1500)
+  }, [toast])
+
+  // Export handler
+  const handleExport = useCallback(() => {
+    exportKPIsAsCSV(liveKPIs)
+    toast({
+      title: 'Export complete',
+      description: 'Dashboard data exported as CSV',
+    })
+  }, [liveKPIs, toast])
+
+  // Show skeleton during initial load
+  if (isLoading) {
+    return (
+      <ScrollArea className="h-full">
+        <DashboardSkeleton />
+      </ScrollArea>
+    )
+  }
+
   return (
     <ScrollArea className="h-full">
       <div className="p-4 md:p-6 space-y-6">
@@ -898,6 +1391,22 @@ export function DashboardPage() {
           <QuickActions />
         </motion.div>
 
+        {/* ---- Dashboard Toolbar ---- */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <DashboardToolbar
+            timeRange={timeRange}
+            setTimeRange={setTimeRange}
+            lastUpdatedMins={lastUpdatedMins}
+            onRefresh={handleRefresh}
+            onExport={handleExport}
+            isRefreshing={isRefreshing}
+          />
+        </motion.div>
+
         {/* ---- Top Row: KPI Cards ---- */}
         <motion.div
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
@@ -905,7 +1414,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
         >
-          {dashboardKPIs.map((kpi, i) => (
+          {liveKPIs.map((kpi, i) => (
             <KPICard key={kpi.label} kpi={kpi} index={i} />
           ))}
         </motion.div>
@@ -923,6 +1432,17 @@ export function DashboardPage() {
           <div className="lg:col-span-1">
             <ConversionFunnel />
           </div>
+        </motion.div>
+
+        {/* ---- New Widgets Row: AI Usage + Team Productivity ---- */}
+        <motion.div
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <AIUsageMetrics />
+          <TeamProductivityWidget />
         </motion.div>
 
         {/* ---- Pipeline + Deadlines Row ---- */}

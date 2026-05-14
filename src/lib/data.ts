@@ -324,3 +324,42 @@ export const blogPosts = [
   { id: 'b5', title: 'Building Custom AI Agents for Niche Industries', excerpt: 'Out-of-the-box agents are powerful, but custom agents built for your specific industry vertical can achieve 40% higher conversion rates. Here is a step-by-step walkthrough for building yours.', author: 'Lisa Wang', date: 'Apr 28, 2026', readTime: '10 min', category: 'AI Strategy', image: 'custom', featured: true },
   { id: 'b6', title: 'From $0 to $128K MRR: A Growth Story with VisionFlow', excerpt: 'How a 3-person agency scaled from zero to $128K monthly recurring revenue in 8 months using AI-powered lead generation, automated outreach, and workflow orchestration.', author: 'Alex Morgan', date: 'Apr 24, 2026', readTime: '9 min', category: 'Case Study', image: 'growth', featured: false },
 ]
+
+// ─── Dashboard: AI Usage Metrics ──────────────────────────────────────────
+
+export const aiUsageMetrics = {
+  tasksToday: 347,
+  costThisMonth: 2847,
+  mostActiveAgent: 'Lead Scout',
+  tokensUsed: 1200000,
+  tokensLimit: 2000000,
+  tasksByDay: [
+    { day: 'Mon', tasks: 42 },
+    { day: 'Tue', tasks: 58 },
+    { day: 'Wed', tasks: 35 },
+    { day: 'Thu', tasks: 67 },
+    { day: 'Fri', tasks: 51 },
+    { day: 'Sat', tasks: 23 },
+    { day: 'Sun', tasks: 18 },
+  ],
+}
+
+// ─── Dashboard: Team Productivity ─────────────────────────────────────────
+
+export const teamProductivity = {
+  activeToday: 5,
+  totalMembers: 7,
+  tasksCompleted: 23,
+  avgResponseTime: '1.2h',
+  topPerformer: 'Sarah Chen',
+  topPerformerTasks: 8,
+  productivityByDay: [
+    { day: 'Mon', completed: 18 },
+    { day: 'Tue', completed: 22 },
+    { day: 'Wed', completed: 15 },
+    { day: 'Thu', completed: 28 },
+    { day: 'Fri', completed: 23 },
+    { day: 'Sat', completed: 10 },
+    { day: 'Sun', completed: 7 },
+  ],
+}
