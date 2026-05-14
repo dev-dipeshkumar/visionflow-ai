@@ -9,6 +9,8 @@ export type PageId =
   | 'projects' 
   | 'chat' 
   | 'analytics' 
+  | 'docs'
+  | 'bugs'
   | 'settings'
 
 export type ViewMode = 'landing' | 'app'

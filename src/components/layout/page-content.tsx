@@ -9,6 +9,8 @@ import { WorkflowsPage } from '@/components/workflows/workflows-page'
 import { ProjectsPage } from '@/components/projects/projects-page'
 import { ChatPage } from '@/components/chat/chat-page'
 import { AnalyticsPage } from '@/components/analytics/analytics-page'
+import { DocsPage } from '@/components/docs/docs-page'
+import { BugsPage } from '@/components/bugs/bugs-page'
 import { SettingsPage } from '@/components/settings/settings-page'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -21,6 +23,8 @@ const pageComponents: Record<PageId, React.ComponentType> = {
   projects: ProjectsPage,
   chat: ChatPage,
   analytics: AnalyticsPage,
+  docs: DocsPage,
+  bugs: BugsPage,
   settings: SettingsPage,
 }
 

@@ -11,10 +11,10 @@
 - [x] Sidebar/navigation — Zustand-driven SPA page switching (9 pages)
 - [x] Dashboard improvements — Welcome banner, quick actions, sparklines, pipeline, deadlines, activity filters
 - [x] Leads panel enterprise CRM
-- [ ] Enterprise Docs system
-- [ ] Team tester accounts
-- [ ] Feedback system
-- [ ] Bug tracking
+- [x] Enterprise Docs system
+- [x] Team tester accounts
+- [x] Feedback system
+- [x] Bug tracking
 - [ ] Responsiveness improvements
 - [ ] Enterprise animations
 - [ ] AI interaction improvements
@@ -62,3 +62,39 @@
 - Stats Bar: expanded from 4 to 6 stats (added Won Deals, Won Revenue)
 - Mobile Pipeline View: vertical stacking of pipeline columns on mobile, horizontal scroll on desktop
 - Fixed Framer Motion `ease` type: cast as `const` tuple to satisfy TypeScript
+
+### Enterprise Docs System (14-05-2026)
+- Added `docsCategories` data: 10 categories (Getting Started, CRM & Leads, AI Agents, Outreach, Workflow Automation, Analytics, Integrations, API Reference, Billing, Security) with icons and color classes
+- Added `docsArticles` data: 12 articles across categories with title, description, readTime, views, updatedAt
+- Docs Page: full documentation browser with search, category grid, and article list views
+- Browse Tab: 10 category cards with icon, color, and document count; clicking navigates to filtered article list
+- All Articles Tab: search bar + category filter dropdown + list of article cards with category badges, read time, view counts
+- Quick Stats Row: Total Articles, Categories, Total Views, Last Updated
+- Write Article button in header
+- Sidebar: added Docs link with BookOpen icon
+
+### Bug Tracking System (14-05-2026)
+- Added `bugs` data: 8 bugs with id, title, status, priority, assignee, reporter, dates, labels, description
+- Bugs Page: full bug tracker with search, status filter, priority badges, and expandable descriptions
+- Quick Stats Row: Open Bugs, In Progress, Resolved, High Priority counts
+- Resolution Progress bar showing percentage resolved
+- Bug List: each bug shows ID, title, priority badge (high/medium/low), status badge with dot indicator, assignee avatar, reporter, labels, created/updated dates
+- Expandable descriptions with AnimatePresence animation on click
+- Report Bug button in header
+- Sidebar: added Bug Tracker link with Bug icon
+
+### Team Tester Accounts (14-05-2026)
+- Added `teamAccounts` data: 8 accounts (4 team + 4 QA testers) with department, lastActive, isTester flag
+- Enhanced Settings Team tab: now "Team & Testers" with filter tabs (All, Team, Testers)
+- Tester accounts: QA Tester Alpha, QA Tester Beta, Staging Reviewer, E2E Test Runner — shown with purple Tester badge
+- Tester-specific UI: violet-tinted avatar fallback, TestTube2 icon badge, "Add Tester" button
+- Role Permissions: added Tester role (25% access level) to the visual permission chart
+- Department and last-active info displayed for each member
+
+### Feedback System (14-05-2026)
+- Added `feedbackItems` data: 8 feedback items (5 features, 2 bugs, 1 improvement) with upvotes, status, category
+- New Settings Feedback tab: feature requests, bug reports, and improvements from team
+- Quick Stats: Total, Features, Bugs, Planned counts
+- Category filter tabs (All, Feature, Bug, Improvement) + search
+- Each feedback card: title, description, category badge (Feature Request/Bug Report/Improvement), status badge (Planned/In Progress/Under Review/Completed), upvote count with ThumbsUp icon, author, date
+- Submit Feedback button in header

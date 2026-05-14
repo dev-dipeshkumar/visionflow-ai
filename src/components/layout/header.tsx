@@ -66,6 +66,14 @@ const pageInfo: Record<PageId, { title: string; subtitle: string }> = {
     title: 'Analytics',
     subtitle: 'Performance insights and reporting',
   },
+  docs: {
+    title: 'Documentation',
+    subtitle: 'Knowledge base, guides, and API reference',
+  },
+  bugs: {
+    title: 'Bug Tracker',
+    subtitle: 'Track, prioritize, and resolve issues',
+  },
   settings: {
     title: 'Settings',
     subtitle: 'Configure your workspace and integrations',

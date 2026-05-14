@@ -180,3 +180,72 @@ export const chatMessages = [
   { id: '4', role: 'user' as const, content: 'Yes, start outreach to the top 10 with our SaaS decision maker template', time: '10:03 AM' },
   { id: '5', role: 'assistant' as const, content: 'Outreach Pro agent activated! I\'ve:\n\n- Customized 10 hyper-personalized emails using prospect intel\n- Scheduled sends for optimal engagement windows\n- Set up 5-step follow-up sequences\n- Added all contacts to the CRM pipeline\n\nFirst emails go out at 9:15 AM tomorrow. I\'ll track opens, clicks, and replies automatically. Want me to set up LinkedIn connection requests too?', time: '10:04 AM' },
 ]
+
+// ─── Enterprise Docs ──────────────────────────────────────────────────────
+
+export const docsCategories = [
+  { id: 'getting-started', name: 'Getting Started', icon: 'Rocket', color: 'bg-vf-emerald/15 text-vf-emerald', docCount: 5 },
+  { id: 'crm', name: 'CRM & Leads', icon: 'Users', color: 'bg-vf-teal/15 text-vf-teal', docCount: 8 },
+  { id: 'ai-agents', name: 'AI Agents', icon: 'Bot', color: 'bg-vf-violet/15 text-vf-violet', docCount: 6 },
+  { id: 'outreach', name: 'Outreach & Campaigns', icon: 'Send', color: 'bg-vf-cyan/15 text-vf-cyan', docCount: 7 },
+  { id: 'workflows', name: 'Workflow Automation', icon: 'Workflow', color: 'bg-vf-amber/15 text-vf-amber', docCount: 5 },
+  { id: 'analytics', name: 'Analytics & Reporting', icon: 'BarChart3', color: 'bg-vf-rose/15 text-vf-rose', docCount: 4 },
+  { id: 'integrations', name: 'Integrations', icon: 'Link', color: 'bg-blue-500/15 text-blue-500', docCount: 6 },
+  { id: 'api', name: 'API Reference', icon: 'Code', color: 'bg-emerald-500/15 text-emerald-500', docCount: 12 },
+  { id: 'billing', name: 'Billing & Plans', icon: 'CreditCard', color: 'bg-amber-500/15 text-amber-500', docCount: 3 },
+  { id: 'security', name: 'Security & Compliance', icon: 'Shield', color: 'bg-rose-500/15 text-rose-500', docCount: 4 },
+]
+
+export const docsArticles = [
+  { id: 'd1', categoryId: 'getting-started', title: 'Quick Start Guide', description: 'Get up and running with VisionFlow AI in under 5 minutes', readTime: '3 min', updatedAt: 'May 10, 2026', views: 2847 },
+  { id: 'd2', categoryId: 'getting-started', title: 'Setting Up Your Workspace', description: 'Configure your workspace, team members, and preferences', readTime: '5 min', updatedAt: 'May 8, 2026', views: 1923 },
+  { id: 'd3', categoryId: 'getting-started', title: 'Connecting Your First Integration', description: 'Link LinkedIn, Apollo, and other data sources to start finding leads', readTime: '4 min', updatedAt: 'May 5, 2026', views: 1654 },
+  { id: 'd4', categoryId: 'crm', title: 'Understanding Lead Scoring', description: 'How our AI scores and qualifies leads automatically', readTime: '6 min', updatedAt: 'May 12, 2026', views: 1234 },
+  { id: 'd5', categoryId: 'crm', title: 'Pipeline Management Best Practices', description: 'Optimize your sales pipeline with proven strategies and AI insights', readTime: '8 min', updatedAt: 'May 9, 2026', views: 987 },
+  { id: 'd6', categoryId: 'crm', title: 'Bulk Import & Export Guide', description: 'Import leads from CSV, Salesforce, HubSpot, and other CRMs', readTime: '5 min', updatedAt: 'May 1, 2026', views: 876 },
+  { id: 'd7', categoryId: 'ai-agents', title: 'Deploying Your First AI Agent', description: 'Step-by-step guide to activating and configuring AI agents', readTime: '7 min', updatedAt: 'May 11, 2026', views: 1567 },
+  { id: 'd8', categoryId: 'ai-agents', title: 'Agent Configuration & Tuning', description: 'Fine-tune temperature, tokens, and auto-run schedules for optimal results', readTime: '6 min', updatedAt: 'May 7, 2026', views: 1123 },
+  { id: 'd9', categoryId: 'outreach', title: 'Creating Multi-Channel Campaigns', description: 'Build email, LinkedIn, and SMS campaigns with smart sequencing', readTime: '9 min', updatedAt: 'May 6, 2026', views: 1432 },
+  { id: 'd10', categoryId: 'workflows', title: 'Building Your First Workflow', description: 'Design automated workflows with triggers, actions, and conditions', readTime: '8 min', updatedAt: 'May 4, 2026', views: 1098 },
+  { id: 'd11', categoryId: 'api', title: 'REST API Authentication', description: 'How to authenticate API requests using API keys and OAuth', readTime: '4 min', updatedAt: 'May 3, 2026', views: 2345 },
+  { id: 'd12', categoryId: 'api', title: 'Leads API Endpoints', description: 'Complete reference for lead management API endpoints', readTime: '12 min', updatedAt: 'May 2, 2026', views: 1876 },
+]
+
+// ─── Team Accounts (enhanced) ─────────────────────────────────────────────
+
+export const teamAccounts = [
+  { id: '1', name: 'Alex Morgan', email: 'alex@company.com', role: 'Admin', status: 'online', avatar: 'AM', department: 'Leadership', lastActive: 'Now', isTester: false },
+  { id: '2', name: 'Sarah Chen', email: 'sarah@company.com', role: 'Manager', status: 'online', avatar: 'SC', department: 'Sales', lastActive: 'Now', isTester: false },
+  { id: '3', name: 'Mike Johnson', email: 'mike@company.com', role: 'Member', status: 'offline', avatar: 'MJ', department: 'Marketing', lastActive: '3 hrs ago', isTester: false },
+  { id: '4', name: 'Lisa Wang', email: 'lisa@company.com', role: 'Member', status: 'online', avatar: 'LW', department: 'Engineering', lastActive: 'Now', isTester: false },
+  { id: '5', name: 'QA Tester Alpha', email: 'qa-alpha@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'QA', department: 'QA', lastActive: '10 min ago', isTester: true },
+  { id: '6', name: 'QA Tester Beta', email: 'qa-beta@test.visionflow.ai', role: 'Tester', status: 'offline', avatar: 'QB', department: 'QA', lastActive: '1 day ago', isTester: true },
+  { id: '7', name: 'Staging Reviewer', email: 'staging@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'SR', department: 'QA', lastActive: '30 min ago', isTester: true },
+  { id: '8', name: 'E2E Test Runner', email: 'e2e@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'E2', department: 'QA', lastActive: '5 min ago', isTester: true },
+]
+
+// ─── Bug Tracking ─────────────────────────────────────────────────────────
+
+export const bugs = [
+  { id: 'BUG-001', title: 'CRM pipeline drag-and-drop not working on Safari', status: 'open', priority: 'high', assignee: 'Lisa Wang', reporter: 'QA Tester Alpha', createdAt: '2026-05-12', updatedAt: '2026-05-13', labels: ['bug', 'crm', 'safari'], description: 'When attempting to drag leads between pipeline columns on Safari 17.4, the drag operation starts but the drop target does not register the drop event. Works correctly on Chrome and Firefox.' },
+  { id: 'BUG-002', title: 'Revenue chart tooltip shows wrong month on hover', status: 'in-progress', priority: 'medium', assignee: 'Mike Johnson', reporter: 'Alex Morgan', createdAt: '2026-05-10', updatedAt: '2026-05-12', labels: ['bug', 'dashboard', 'charts'], description: 'The revenue overview chart on the dashboard shows the previous month in the tooltip when hovering over data points. Off-by-one error in the tooltip formatter.' },
+  { id: 'BUG-003', title: 'Email template variables not replacing for LinkedIn contacts', status: 'open', priority: 'high', assignee: 'Sarah Chen', reporter: 'QA Tester Beta', createdAt: '2026-05-11', updatedAt: '2026-05-13', labels: ['bug', 'outreach', 'templates'], description: 'When sending outreach using the "SaaS Decision Maker" template to LinkedIn-sourced contacts, {{company}} and {{title}} variables remain unreplaced in the sent email.' },
+  { id: 'BUG-004', title: 'Agent success rate calculation includes cancelled runs', status: 'resolved', priority: 'low', assignee: 'Lisa Wang', reporter: 'Staging Reviewer', createdAt: '2026-05-08', updatedAt: '2026-05-11', labels: ['bug', 'agents', 'analytics'], description: 'The agent success rate metric was including cancelled runs in the denominator, making success rates appear lower than actual. Fixed by filtering cancelled runs from the calculation.' },
+  { id: 'BUG-005', title: 'Workflow builder node properties panel not scrollable', status: 'open', priority: 'medium', assignee: 'Mike Johnson', reporter: 'E2E Test Runner', createdAt: '2026-05-13', updatedAt: '2026-05-13', labels: ['bug', 'workflows', 'ui'], description: 'When a workflow has many conditions in the node properties panel, the panel content overflows without a scrollbar, making it impossible to see or edit all conditions.' },
+  { id: 'BUG-006', title: 'Dark mode toggle causes flash of unstyled content', status: 'resolved', priority: 'low', assignee: 'Lisa Wang', reporter: 'QA Tester Alpha', createdAt: '2026-05-06', updatedAt: '2026-05-09', labels: ['bug', 'settings', 'theme'], description: 'Switching between light and dark mode causes a brief flash of unstyled content (FOUC). Should apply theme class to document root before render.' },
+  { id: 'BUG-007', title: 'Lead export CSV has incorrect encoding for special characters', status: 'in-progress', priority: 'medium', assignee: 'Sarah Chen', reporter: 'Alex Morgan', createdAt: '2026-05-09', updatedAt: '2026-05-12', labels: ['bug', 'crm', 'export'], description: 'Exporting leads with names containing accented characters (e.g., "René", "Müller") results in garbled text in the CSV file. UTF-8 BOM header needs to be added.' },
+  { id: 'BUG-008', title: 'Notification bell count resets on page navigation', status: 'open', priority: 'low', assignee: 'Mike Johnson', reporter: 'Staging Reviewer', createdAt: '2026-05-13', updatedAt: '2026-05-13', labels: ['bug', 'notifications'], description: 'The notification badge count in the header resets to 0 when navigating between pages, even when there are unread notifications. State persistence issue in Zustand store.' },
+]
+
+// ─── Feedback ──────────────────────────────────────────────────────────────
+
+export const feedbackItems = [
+  { id: 'fb1', title: 'Add Kanban drag-and-drop for CRM pipeline', category: 'feature', status: 'planned', upvotes: 47, author: 'Sarah Chen', createdAt: '2026-04-20', description: 'Allow dragging leads between pipeline stages instead of using the status dropdown. This would make the CRM much more intuitive and faster to use.' },
+  { id: 'fb2', title: 'Dark mode support for the entire app', category: 'feature', status: 'completed', upvotes: 89, author: 'Mike Johnson', createdAt: '2026-03-15', description: 'Full dark mode support across all pages including the landing page, dashboard, CRM, and settings. Currently only partially supported.' },
+  { id: 'fb3', title: 'Bulk email sending from CRM', category: 'feature', status: 'planned', upvotes: 34, author: 'Alex Morgan', createdAt: '2026-05-01', description: 'Ability to select multiple leads and send a personalized email to all of them at once, with template variables auto-filled per lead.' },
+  { id: 'fb4', title: 'Campaign performance is slow with 10K+ contacts', category: 'bug', status: 'in-progress', upvotes: 22, author: 'Lisa Wang', createdAt: '2026-04-28', description: 'When a campaign has more than 10,000 contacts, the campaign detail page takes over 5 seconds to load. Need pagination or lazy loading for large campaigns.' },
+  { id: 'fb5', title: 'Mobile sidebar overlaps content on tablets', category: 'bug', status: 'resolved', upvotes: 15, author: 'QA Tester Alpha', createdAt: '2026-04-15', description: 'On iPad-sized screens (768px-1024px), the sidebar overlay covers content instead of pushing it. The sidebar should collapse properly on tablet viewports.' },
+  { id: 'fb6', title: 'AI agent chat should support file uploads', category: 'feature', status: 'review', upvotes: 56, author: 'Sarah Chen', createdAt: '2026-05-05', description: 'Allow uploading PDFs, spreadsheets, and images to the AI chat so agents can analyze and process uploaded files directly in the conversation.' },
+  { id: 'fb7', title: 'Weekly digest email should include AI insights', category: 'improvement', status: 'planned', upvotes: 28, author: 'Alex Morgan', createdAt: '2026-04-25', description: 'The weekly digest email currently only shows raw numbers. It should include AI-generated insights like "Lead quality improved 15% this week" and suggested actions.' },
+  { id: 'fb8', title: 'Add Gantt chart view to projects', category: 'feature', status: 'review', upvotes: 41, author: 'Mike Johnson', createdAt: '2026-05-08', description: 'A Gantt chart view for projects would help visualize timelines, dependencies, and overlapping work across multiple projects.' },
+]

@@ -11,6 +11,8 @@ import {
   FolderOpen,
   MessageSquare,
   BarChart3,
+  BookOpen,
+  Bug,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -42,6 +44,8 @@ const navItems: NavItem[] = [
   { label: 'Projects', pageId: 'projects', icon: FolderOpen },
   { label: 'AI Chat', pageId: 'chat', icon: MessageSquare, showBadge: true },
   { label: 'Analytics', pageId: 'analytics', icon: BarChart3 },
+  { label: 'Docs', pageId: 'docs', icon: BookOpen },
+  { label: 'Bug Tracker', pageId: 'bugs', icon: Bug },
   { label: 'Settings', pageId: 'settings', icon: Settings },
 ]
 

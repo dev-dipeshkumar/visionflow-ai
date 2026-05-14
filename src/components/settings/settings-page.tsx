@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { integrations } from '@/lib/data'
+import { integrations, teamAccounts, feedbackItems } from '@/lib/data'
 import {
   Settings,
   User,
@@ -28,6 +28,14 @@ import {
   ExternalLink,
   ChevronRight,
   Database,
+  TestTube2,
+  ThumbsUp,
+  MessageCircle,
+  Bug,
+  Lightbulb,
+  ArrowUpRight,
+  Sparkles,
+  Filter,
 } from 'lucide-react'
 import {
   Card,
@@ -71,12 +79,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
-const teamMembers = [
-  { id: '1', name: 'Alex Morgan', email: 'alex@company.com', role: 'Admin', status: 'online', avatar: 'AM' },
-  { id: '2', name: 'Sarah Chen', email: 'sarah@company.com', role: 'Manager', status: 'online', avatar: 'SC' },
-  { id: '3', name: 'Mike Johnson', email: 'mike@company.com', role: 'Member', status: 'offline', avatar: 'MJ' },
-  { id: '4', name: 'Lisa Wang', email: 'lisa@company.com', role: 'Member', status: 'online', avatar: 'LW' },
-]
+// teamMembers now comes from @/lib/data (teamAccounts)
 
 const invoices = [
   { id: 'INV-001', date: 'Mar 1, 2026', amount: '$99.00', status: 'Paid' },
@@ -100,7 +103,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } },
 }
 
 // ─── General Tab ─────────────────────────────────────────────────────────────
@@ -446,13 +449,25 @@ function IntegrationsTab() {
   )
 }
 
-// ─── Team Tab ────────────────────────────────────────────────────────────────
+// ─── Team Tab (Enhanced) ──────────────────────────────────────────────────────
 function TeamTab() {
+  const [teamFilter, setTeamFilter] = useState<'all' | 'team' | 'testers'>('all')
+
   const roleColors: Record<string, string> = {
     Admin: 'bg-rose-500/15 text-rose-700 border-rose-200',
     Manager: 'bg-amber-500/15 text-amber-700 border-amber-200',
     Member: 'bg-sky-500/15 text-sky-700 border-sky-200',
+    Tester: 'bg-violet-500/15 text-violet-700 border-violet-200',
   }
+
+  const filteredMembers = teamAccounts.filter((m) => {
+    if (teamFilter === 'team') return !m.isTester
+    if (teamFilter === 'testers') return m.isTester
+    return true
+  })
+
+  const regularMembers = teamAccounts.filter((m) => !m.isTester)
+  const testerMembers = teamAccounts.filter((m) => m.isTester)
 
   return (
     <motion.div
@@ -464,18 +479,41 @@ function TeamTab() {
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold">Team Members</h3>
-            <p className="text-sm text-muted-foreground">Manage who has access to your workspace</p>
+            <h3 className="font-semibold">Team & Testers</h3>
+            <p className="text-sm text-muted-foreground">Manage team members and QA tester accounts</p>
           </div>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Invite Member
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Invite Member
+            </Button>
+            <Button size="sm" variant="outline">
+              <TestTube2 className="h-4 w-4 mr-1.5" />
+              Add Tester
+            </Button>
+          </div>
         </div>
       </motion.div>
 
+      {/* Filter tabs */}
+      <motion.div variants={itemVariants} className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
+        {(['all', 'team', 'testers'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setTeamFilter(f)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+              teamFilter === f
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {f === 'all' ? `All (${teamAccounts.length})` : f === 'team' ? `Team (${regularMembers.length})` : `Testers (${testerMembers.length})`}
+          </button>
+        ))}
+      </motion.div>
+
       <div className="space-y-3">
-        {teamMembers.map((member) => (
+        {filteredMembers.map((member) => (
           <motion.div
             key={member.id}
             variants={itemVariants}
@@ -487,7 +525,9 @@ function TeamTab() {
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="text-sm font-semibold">{member.avatar}</AvatarFallback>
+                      <AvatarFallback className={`text-sm font-semibold ${member.isTester ? 'bg-violet-100 text-violet-700' : 'bg-muted'}`}>
+                        {member.avatar}
+                      </AvatarFallback>
                     </Avatar>
                     <span
                       className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
@@ -496,14 +536,27 @@ function TeamTab() {
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{member.name}</p>
+                      {member.isTester && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-violet-300 text-violet-600 bg-violet-50">
+                          <TestTube2 className="h-2.5 w-2.5 mr-0.5" />
+                          Tester
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground">{member.email}</p>
+                      <span className="text-muted-foreground/40">·</span>
+                      <p className="text-xs text-muted-foreground">{member.department}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant="outline" className={`text-xs ${roleColors[member.role]}`}>
                     {member.role}
                   </Badge>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">{member.lastActive}</span>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -527,6 +580,7 @@ function TeamTab() {
                 { role: 'Admin', desc: 'Full access to all features, settings, and billing', level: 100 },
                 { role: 'Manager', desc: 'Manage team, campaigns, and integrations', level: 75 },
                 { role: 'Member', desc: 'Use assigned features and view reports', level: 40 },
+                { role: 'Tester', desc: 'Access QA features, bug reporting, and staging data', level: 25 },
               ].map((r) => (
                 <div key={r.role} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
@@ -540,6 +594,159 @@ function TeamTab() {
           </CardContent>
         </Card>
       </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── Feedback Tab ─────────────────────────────────────────────────────────────
+function FeedbackTab() {
+  const [feedbackFilter, setFeedbackFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+
+  const categoryConfig: Record<string, { label: string; icon: typeof Lightbulb; className: string }> = {
+    feature: { label: 'Feature Request', icon: Lightbulb, className: 'bg-vf-emerald/15 text-vf-emerald border-vf-emerald/25' },
+    bug: { label: 'Bug Report', icon: Bug, className: 'bg-vf-rose/15 text-vf-rose border-vf-rose/25' },
+    improvement: { label: 'Improvement', icon: Sparkles, className: 'bg-vf-amber/15 text-vf-amber border-vf-amber/25' },
+  }
+
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    planned: { label: 'Planned', className: 'bg-blue-500/15 text-blue-600 border-blue-500/25' },
+    'in-progress': { label: 'In Progress', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
+    review: { label: 'Under Review', className: 'bg-violet-500/15 text-violet-600 border-violet-500/25' },
+    completed: { label: 'Completed', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
+    resolved: { label: 'Resolved', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
+  }
+
+  const filtered = feedbackItems.filter((f) => {
+    const matchesSearch = search === '' || f.title.toLowerCase().includes(search.toLowerCase()) || f.description.toLowerCase().includes(search.toLowerCase())
+    const matchesCategory = feedbackFilter === 'all' || f.category === feedbackFilter
+    return matchesSearch && matchesCategory
+  })
+
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Feedback & Requests</h3>
+            <p className="text-sm text-muted-foreground">Feature requests, bug reports, and improvements from your team</p>
+          </div>
+          <Button size="sm">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Submit Feedback
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Stats */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', value: feedbackItems.length, icon: MessageCircle, color: 'text-foreground', bg: 'bg-muted' },
+          { label: 'Features', value: feedbackItems.filter((f) => f.category === 'feature').length, icon: Lightbulb, color: 'text-vf-emerald', bg: 'bg-vf-emerald/15' },
+          { label: 'Bugs', value: feedbackItems.filter((f) => f.category === 'bug').length, icon: Bug, color: 'text-vf-rose', bg: 'bg-vf-rose/15' },
+          { label: 'Planned', value: feedbackItems.filter((f) => f.status === 'planned').length, icon: Sparkles, color: 'text-vf-amber', bg: 'bg-vf-amber/15' },
+        ].map((stat) => (
+          <Card key={stat.label} className="py-0">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className={`rounded-lg p-2 ${stat.bg} ${stat.color}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="text-lg font-bold">{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </motion.div>
+
+      {/* Filters */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
+        <Input
+          placeholder="Search feedback..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 sm:w-[260px]"
+        />
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
+          {(['all', 'feature', 'bug', 'improvement'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFeedbackFilter(f)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                feedbackFilter === f
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f === 'all' ? 'All' : f}
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Feedback List */}
+      <div className="space-y-3">
+        {filtered.map((item) => {
+          const catConf = categoryConfig[item.category] ?? categoryConfig.feature
+          const statConf = statusConfig[item.status] ?? statusConfig.planned
+          const CatIcon = catConf.icon
+
+          return (
+            <motion.div
+              key={item.id}
+              variants={itemVariants}
+              whileHover={{ x: 4 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            >
+              <Card className="py-0 transition-shadow hover:shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${catConf.className}`}>
+                      <CatIcon className="size-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <ThumbsUp className="size-3.5 text-muted-foreground" />
+                          <span className="text-xs font-medium">{item.upvotes}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${catConf.className}`}>
+                          {catConf.label}
+                        </Badge>
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${statConf.className}`}>
+                          {statConf.label}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          by {item.author} · {item.createdAt}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <MessageCircle className="size-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">No feedback found</p>
+            <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }
@@ -843,6 +1050,10 @@ export function SettingsPage() {
             <User className="h-3.5 w-3.5" />
             Team
           </TabsTrigger>
+          <TabsTrigger value="feedback" className="gap-1.5">
+            <MessageCircle className="h-3.5 w-3.5" />
+            Feedback
+          </TabsTrigger>
           <TabsTrigger value="billing" className="gap-1.5">
             <CreditCard className="h-3.5 w-3.5" />
             Billing
@@ -861,6 +1072,9 @@ export function SettingsPage() {
         </TabsContent>
         <TabsContent value="team" className="mt-6">
           <TeamTab />
+        </TabsContent>
+        <TabsContent value="feedback" className="mt-6">
+          <FeedbackTab />
         </TabsContent>
         <TabsContent value="billing" className="mt-6">
           <BillingTab />
