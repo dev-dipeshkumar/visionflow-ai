@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 import { useAppStore } from '@/lib/store'
 import {
   Bot,
@@ -14,6 +16,8 @@ import {
   TrendingUp,
   Menu,
   X,
+  Sun,
+  Moon,
   LayoutDashboard,
   Search,
   Mail,
@@ -37,6 +41,12 @@ const navLinks = ['Features', 'Workflow', 'Pricing', 'Integrations', 'Docs', 'Bl
 export function Hero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { setViewMode } = useAppStore()
+  const { theme, setTheme } = useTheme()
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   return (
     <section className="relative min-h-screen overflow-hidden">
@@ -72,7 +82,31 @@ export function Hero() {
             </div>
 
             {/* Desktop CTA */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2">
+              {/* Theme toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Toggle theme"
+              >
+                {mounted ? (
+                  <motion.div
+                    initial={false}
+                    animate={{ rotate: theme === 'dark' ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  >
+                    {theme === 'dark' ? (
+                      <Sun className="h-5 w-5" />
+                    ) : (
+                      <Moon className="h-5 w-5" />
+                    )}
+                  </motion.div>
+                ) : (
+                  <Sun className="h-5 w-5" />
+                )}
+              </Button>
               <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setViewMode('login')}>
                 Sign In
               </Button>
@@ -112,6 +146,21 @@ export function Hero() {
                   </a>
                 ))}
                 <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
+                  <Button
+                    variant="ghost"
+                    className="justify-start text-sm text-muted-foreground gap-2"
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  >
+                    {mounted ? (
+                      theme === 'dark' ? (
+                        <><Sun className="h-4 w-4" /> Light Mode</>
+                      ) : (
+                        <><Moon className="h-4 w-4" /> Dark Mode</>
+                      )
+                    ) : (
+                      <><Sun className="h-4 w-4" /> Toggle Theme</>
+                    )}
+                  </Button>
                   <Button variant="ghost" className="justify-start text-sm text-muted-foreground" onClick={() => setViewMode('login')}>
                     Sign In
                   </Button>
