@@ -1,6 +1,7 @@
 'use client'
 
-import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents } from '@/lib/data'
+import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents, pipelineStages, projects } from '@/lib/data'
+import { useAppStore } from '@/lib/store'
 import {
   Users,
   DollarSign,
@@ -32,6 +33,17 @@ import {
   ArrowDownRight,
   Activity,
   Zap,
+  Calendar,
+  Target,
+  Rocket,
+  MessageSquare,
+  Plus,
+  ArrowRight,
+  Filter,
+  Sun,
+  Moon,
+  Coffee,
+  Sunset,
 } from 'lucide-react'
 import {
   Card,
@@ -45,6 +57,7 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { motion } from 'framer-motion'
 import {
   AreaChart,
@@ -54,8 +67,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts'
 
 // ---------------------------------------------------------------------------
@@ -158,6 +169,15 @@ const funnelColors = [
   'bg-vf-violet',
 ]
 
+const stageColorMap: Record<string, string> = {
+  new: 'bg-blue-500',
+  contacted: 'bg-violet-500',
+  qualified: 'bg-amber-500',
+  proposal: 'bg-emerald-500',
+  negotiation: 'bg-rose-500',
+  won: 'bg-green-500',
+}
+
 // ---------------------------------------------------------------------------
 // Animation variants
 // ---------------------------------------------------------------------------
@@ -225,8 +245,127 @@ function RevenueTooltip({
 }
 
 // ---------------------------------------------------------------------------
-// KPI Card
+// Welcome Banner
 // ---------------------------------------------------------------------------
+
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return { text: 'Good morning', icon: Coffee }
+  if (hour < 17) return { text: 'Good afternoon', icon: Sun }
+  return { text: 'Good evening', icon: Sunset }
+}
+
+function WelcomeBanner() {
+  const { setActivePage } = useAppStore()
+  const { text: greeting, icon: GreetingIcon } = getGreeting()
+  const activeAgents = aiAgents.filter((a) => a.status === 'active').length
+
+  return (
+    <motion.div variants={itemVariants}>
+      <Card className="relative overflow-hidden border-vf-emerald/20 bg-gradient-to-r from-vf-emerald/5 via-transparent to-vf-teal/5 py-0">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-vf-emerald/15 text-vf-emerald">
+                <GreetingIcon className="size-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  {greeting}, Alex
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  You have <span className="font-medium text-foreground">{activeAgents} AI agents</span> running and{' '}
+                  <span className="font-medium text-foreground">{pipelineStages.reduce((sum, s) => sum + s.count, 0)} active leads</span> in your pipeline.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-vf-emerald hover:bg-vf-emerald/90 text-white"
+                onClick={() => setActivePage('crm')}
+              >
+                <Search className="size-3.5" />
+                Find Leads
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setActivePage('outreach')}
+              >
+                <Send className="size-3.5" />
+                New Campaign
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setActivePage('chat')}
+              >
+                <MessageSquare className="size-3.5" />
+                AI Chat
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Quick Actions
+// ---------------------------------------------------------------------------
+
+const quickActions = [
+  { label: 'Find Leads', icon: Search, pageId: 'crm' as const, color: 'bg-vf-emerald/15 text-vf-emerald hover:bg-vf-emerald/25' },
+  { label: 'New Campaign', icon: Send, pageId: 'outreach' as const, color: 'bg-vf-teal/15 text-vf-teal hover:bg-vf-teal/25' },
+  { label: 'AI Chat', icon: MessageSquare, pageId: 'chat' as const, color: 'bg-vf-cyan/15 text-vf-cyan hover:bg-vf-cyan/25' },
+  { label: 'Create Proposal', icon: FileText, pageId: 'agents' as const, color: 'bg-vf-amber/15 text-vf-amber hover:bg-vf-amber/25' },
+  { label: 'View Analytics', icon: BarChart3, pageId: 'analytics' as const, color: 'bg-vf-violet/15 text-vf-violet hover:bg-vf-violet/25' },
+  { label: 'Manage Projects', icon: FolderOpen, pageId: 'projects' as const, color: 'bg-vf-rose/15 text-vf-rose hover:bg-vf-rose/25' },
+]
+
+function QuickActions() {
+  const { setActivePage } = useAppStore()
+
+  return (
+    <motion.div variants={itemVariants}>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {quickActions.map((action) => {
+          const Icon = action.icon
+          return (
+            <motion.button
+              key={action.label}
+              onClick={() => setActivePage(action.pageId)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-colors ${action.color}`}
+            >
+              <Icon className="size-5" />
+              <span className="text-xs font-medium">{action.label}</span>
+            </motion.button>
+          )
+        })}
+      </div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// KPI Card with Sparkline
+// ---------------------------------------------------------------------------
+
+// Deterministic sparkline data per KPI index for consistent SSR
+const sparklineData = [
+  [35, 42, 38, 52, 48, 65, 72, 68, 78, 85],
+  [20, 25, 28, 35, 32, 40, 45, 52, 58, 62],
+  [18, 22, 20, 28, 25, 30, 35, 32, 38, 42],
+  [10, 12, 15, 14, 18, 20, 22, 25, 28, 34],
+  [30, 35, 42, 48, 55, 62, 68, 72, 80, 88],
+  [25, 30, 35, 42, 50, 55, 60, 68, 75, 82],
+]
 
 function KPICard({
   kpi,
@@ -237,6 +376,8 @@ function KPICard({
 }) {
   const Icon = kpiIconMap[kpi.icon] ?? Activity
   const isPositive = kpi.trend === 'up'
+  const data = sparklineData[index % sparklineData.length]
+  const maxVal = Math.max(...data)
 
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} className="h-full">
@@ -259,7 +400,21 @@ function KPICard({
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-1.5">
+          {/* Mini sparkline */}
+          <div className="mt-3 flex items-end gap-[3px] h-8">
+            {data.map((val, i) => (
+              <div
+                key={i}
+                className={`flex-1 rounded-sm ${kpiBarColors[index % kpiBarColors.length]}`}
+                style={{
+                  height: `${(val / maxVal) * 100}%`,
+                  opacity: 0.3 + (i / data.length) * 0.7,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="mt-2 flex items-center gap-1.5">
             {isPositive ? (
               <ArrowUpRight className="size-3.5 text-emerald-500" />
             ) : (
@@ -299,7 +454,7 @@ function RevenueChart() {
           </div>
         </CardHeader>
         <CardContent className="pb-4 pt-0">
-          <div className="h-[300px] w-full">
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={revenueData}
@@ -411,10 +566,82 @@ function ConversionFunnel() {
 }
 
 // ---------------------------------------------------------------------------
-// Activity Feed
+// Pipeline Summary (Mini Kanban)
 // ---------------------------------------------------------------------------
 
+function PipelineSummary() {
+  const { setActivePage } = useAppStore()
+  const totalLeads = pipelineStages.reduce((sum, s) => sum + s.count, 0)
+
+  return (
+    <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
+      <Card className="h-full py-0">
+        <CardHeader className="pb-2 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Deal Pipeline</CardTitle>
+              <CardDescription>{totalLeads} leads across {pipelineStages.length} stages</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground" onClick={() => setActivePage('crm')}>
+              View All <ArrowRight className="size-3" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4 pt-0">
+          <div className="flex items-end gap-1 h-24 mb-3">
+            {pipelineStages.map((stage, i) => {
+              const height = totalLeads > 0 ? (stage.count / totalLeads) * 100 : 0
+              return (
+                <div key={stage.id} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-[10px] font-medium text-foreground">{stage.count}</span>
+                  <div className="w-full bg-muted rounded-sm overflow-hidden flex-1 flex items-end">
+                    <motion.div
+                      className={`w-full rounded-sm ${Object.values(stageColorMap)[i] ?? 'bg-primary'}`}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(height, 8)}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.08, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {pipelineStages.map((stage, i) => (
+              <div key={stage.id} className="flex items-center gap-1.5">
+                <span className={`size-2 rounded-full ${Object.values(stageColorMap)[i] ?? 'bg-primary'}`} />
+                <span className="text-[10px] text-muted-foreground">{stage.name}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Activity Feed (with filter)
+// ---------------------------------------------------------------------------
+
+const activityFilters = ['All', 'Leads', 'Outreach', 'Deals', 'Agents', 'Delivery'] as const
+type ActivityFilter = typeof activityFilters[number]
+
+const filterMap: Record<ActivityFilter, string[]> = {
+  All: [],
+  Leads: ['lead_created', 'referral'],
+  Outreach: ['email_sent', 'call_scheduled'],
+  Deals: ['deal_won', 'proposal_sent', 'payment', 'upsell'],
+  Agents: ['agent_executed'],
+  Delivery: ['delivery'],
+}
+
 function ActivityFeed() {
+  const [activeFilter, setActiveFilter] = useState<ActivityFilter>('All')
+  const filtered = activeFilter === 'All'
+    ? activities
+    : activities.filter((a) => filterMap[activeFilter].includes(a.type))
+
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
       <Card className="h-full py-0">
@@ -426,11 +653,30 @@ function ActivityFeed() {
             </div>
             <Badge variant="secondary">{activities.length} events</Badge>
           </div>
+          {/* Filter tabs */}
+          <div className="flex gap-1 mt-3 flex-wrap">
+            {activityFilters.map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeFilter === f
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="pb-4 pt-0">
-          <ScrollArea className="h-[340px] pr-2">
+          <ScrollArea className="h-[300px] pr-2">
             <div className="space-y-1">
-              {activities.map((activity) => {
+              {filtered.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">No activity in this category</p>
+              )}
+              {filtered.map((activity) => {
                 const Icon = activityIconMap[activity.icon] ?? Activity
                 const borderColor = activityTypeColors[activity.type] ?? 'border-vf-emerald'
                 const iconBg = activityIconBgColors[activity.type] ?? 'bg-vf-emerald/15 text-vf-emerald'
@@ -467,7 +713,7 @@ function ActivityFeed() {
 // ---------------------------------------------------------------------------
 
 function AgentStatus() {
-  // Show top 8 agents for dashboard summary
+  const { setActivePage } = useAppStore()
   const summaryAgents = aiAgents.slice(0, 8)
 
   return (
@@ -479,10 +725,15 @@ function AgentStatus() {
               <CardTitle className="text-base font-semibold">AI Agent Status</CardTitle>
               <CardDescription>Real-time agent monitoring</CardDescription>
             </div>
-            <Badge variant="secondary" className="gap-1">
-              <Bot className="size-3" />
-              {aiAgents.filter((a) => a.status === 'active').length} active
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="gap-1">
+                <Bot className="size-3" />
+                {aiAgents.filter((a) => a.status === 'active').length} active
+              </Badge>
+              <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground" onClick={() => setActivePage('agents')}>
+                View All <ArrowRight className="size-3" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pb-4 pt-0">
@@ -548,49 +799,154 @@ function AgentStatus() {
 }
 
 // ---------------------------------------------------------------------------
+// Upcoming Deadlines
+// ---------------------------------------------------------------------------
+
+function UpcomingDeadlines() {
+  const { setActivePage } = useAppStore()
+  const upcomingProjects = [...projects]
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
+    .slice(0, 5)
+
+  const statusColors: Record<string, string> = {
+    in_progress: 'bg-vf-teal/15 text-vf-teal',
+    review: 'bg-vf-amber/15 text-vf-amber',
+    onboarding: 'bg-vf-cyan/15 text-vf-cyan',
+    delivery: 'bg-vf-emerald/15 text-vf-emerald',
+  }
+
+  return (
+    <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
+      <Card className="h-full py-0">
+        <CardHeader className="pb-2 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Upcoming Deadlines</CardTitle>
+              <CardDescription>Project deadlines approaching</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground" onClick={() => setActivePage('projects')}>
+              All Projects <ArrowRight className="size-3" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4 pt-0">
+          <div className="space-y-3">
+            {upcomingProjects.map((project) => {
+              const deadlineDate = new Date(project.deadline)
+              const now = new Date()
+              const daysLeft = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              const isUrgent = daysLeft <= 7
+
+              return (
+                <div key={project.id} className="flex items-center gap-3">
+                  <div className="flex flex-col items-center">
+                    <Calendar className={`size-4 ${isUrgent ? 'text-rose-500' : 'text-muted-foreground'}`} />
+                    <span className={`text-[10px] font-medium mt-0.5 ${isUrgent ? 'text-rose-500' : 'text-muted-foreground'}`}>
+                      {daysLeft > 0 ? `${daysLeft}d` : 'Due'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-muted-foreground">{project.client}</span>
+                      <Badge variant="outline" className={`px-1.5 py-0 text-[10px] ${statusColors[project.status] ?? ''}`}>
+                        {project.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[10px] text-muted-foreground">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-1.5 w-16" />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main Dashboard Page
 // ---------------------------------------------------------------------------
 
+import { useState } from 'react'
+
 export function DashboardPage() {
   return (
-    <div className="space-y-6">
-      {/* ---- Top Row: KPI Cards ---- */}
-      <motion.div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {dashboardKPIs.map((kpi, i) => (
-          <KPICard key={kpi.label} kpi={kpi} index={i} />
-        ))}
-      </motion.div>
+    <ScrollArea className="h-full">
+      <div className="p-4 md:p-6 space-y-6">
+        {/* ---- Welcome Banner ---- */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <WelcomeBanner />
+        </motion.div>
 
-      {/* ---- Middle Row: Revenue Chart + Conversion Funnel ---- */}
-      <motion.div
-        className="grid grid-cols-1 gap-4 lg:grid-cols-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="lg:col-span-2">
-          <RevenueChart />
-        </div>
-        <div className="lg:col-span-1">
-          <ConversionFunnel />
-        </div>
-      </motion.div>
+        {/* ---- Quick Actions ---- */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <QuickActions />
+        </motion.div>
 
-      {/* ---- Bottom Row: Activity Feed + AI Agent Status ---- */}
-      <motion.div
-        className="grid grid-cols-1 gap-4 lg:grid-cols-2"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <ActivityFeed />
-        <AgentStatus />
-      </motion.div>
-    </div>
+        {/* ---- Top Row: KPI Cards ---- */}
+        <motion.div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {dashboardKPIs.map((kpi, i) => (
+            <KPICard key={kpi.label} kpi={kpi} index={i} />
+          ))}
+        </motion.div>
+
+        {/* ---- Middle Row: Revenue Chart + Conversion Funnel ---- */}
+        <motion.div
+          className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="lg:col-span-2">
+            <RevenueChart />
+          </div>
+          <div className="lg:col-span-1">
+            <ConversionFunnel />
+          </div>
+        </motion.div>
+
+        {/* ---- Pipeline + Deadlines Row ---- */}
+        <motion.div
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <PipelineSummary />
+          <UpcomingDeadlines />
+        </motion.div>
+
+        {/* ---- Bottom Row: Activity Feed + AI Agent Status ---- */}
+        <motion.div
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <ActivityFeed />
+          <AgentStatus />
+        </motion.div>
+      </div>
+    </ScrollArea>
   )
 }
