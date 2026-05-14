@@ -179,3 +179,25 @@ Work Log:
 Stage Summary:
 - Docs is now visible in the landing page header nav (desktop + mobile)
 - API Docs in footer connects to the app's Docs page where API reference articles exist
+
+---
+Task ID: 1c
+Agent: Main
+Task: Fix Docs navigation — landing page docs for new users, blog section, app/docs stays in sidebar only
+
+Work Log:
+- Fixed hero.tsx: Removed Docs button that navigated to app. Changed to anchor link #docs pointing to landing page section. Added 'Blog' to navLinks.
+- Fixed footer.tsx: API Docs now links to #docs on landing page (not the app). Blog link goes to #blog.
+- Created src/components/landing/docs.tsx: Public-facing Docs section for new users with quick-start steps (4 steps), 6 doc category cards with topic lists, security/trust banner, and CTA to sign in for full docs.
+- Created src/components/landing/blog.tsx: Blog section showing featured posts (top 2 with gradient bar) + remaining posts grid. CTA promotes writing articles from the app that auto-publish to the blog.
+- Added blogPosts data to data.ts: 6 blog posts (4 featured, 2 recent) with title, excerpt, author, date, readTime, category.
+- Wired both sections into page.tsx: DocsSection and BlogSection placed between Testimonials and FAQ.
+- Build verified clean (0 errors)
+
+Stage Summary:
+- Landing page "Docs" link → #docs section on landing (NOT the app) — safe for new users
+- Landing page "Blog" link → #blog section on landing
+- Footer "API Docs" → #docs section on landing
+- App sidebar "Docs" → stays as-is for authenticated users
+- Write Article feature concept: articles written in app → auto-published to landing blog
+- No more "blunder" of throwing new visitors into the app dashboard

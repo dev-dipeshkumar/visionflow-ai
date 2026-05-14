@@ -20,7 +20,6 @@ import {
   FileText,
   Settings,
   Activity,
-  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -33,11 +32,11 @@ const fadeInUp = {
   }),
 }
 
-const navLinks = ['Features', 'Workflow', 'Pricing', 'Integrations', 'Docs']
+const navLinks = ['Features', 'Workflow', 'Pricing', 'Integrations', 'Docs', 'Blog']
 
 export function Hero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { setViewMode, setActivePage } = useAppStore()
+  const { setViewMode } = useAppStore()
 
   return (
     <section className="relative min-h-screen overflow-hidden">
@@ -62,24 +61,13 @@ export function Hero() {
             {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
-                link === 'Docs' ? (
-                  <button
-                    key={link}
-                    onClick={() => { setActivePage('docs'); setViewMode('app') }}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1.5"
-                  >
-                    <BookOpen className="size-3.5" />
-                    {link}
-                  </button>
-                ) : (
-                  <a
-                    key={link}
-                    href={`#${link.toLowerCase()}`}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link}
-                  </a>
-                )
+                <a
+                  key={link}
+                  href={`#${link.toLowerCase()}`}
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {link}
+                </a>
               ))}
             </div>
 
@@ -114,25 +102,14 @@ export function Hero() {
             >
               <div className="px-4 py-4 space-y-3">
                 {navLinks.map((link) => (
-                  link === 'Docs' ? (
-                    <button
-                      key={link}
-                      onClick={() => { setActivePage('docs'); setViewMode('app'); setMobileMenuOpen(false) }}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground py-2"
-                    >
-                      <BookOpen className="size-3.5" />
-                      {link}
-                    </button>
-                  ) : (
-                    <a
-                      key={link}
-                      href={`#${link.toLowerCase()}`}
-                      className="block text-sm text-muted-foreground hover:text-foreground py-2"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {link}
-                    </a>
-                  )
+                  <a
+                    key={link}
+                    href={`#${link.toLowerCase()}`}
+                    className="block text-sm text-muted-foreground hover:text-foreground py-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link}
+                  </a>
                 ))}
                 <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
                   <Button variant="ghost" className="justify-start text-sm text-muted-foreground" onClick={() => setViewMode('app')}>

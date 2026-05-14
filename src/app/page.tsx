@@ -11,6 +11,8 @@ import { Integrations } from '@/components/landing/integrations'
 import { Pricing } from '@/components/landing/pricing'
 import { Testimonials } from '@/components/landing/testimonials'
 import { Faq } from '@/components/landing/faq'
+import { DocsSection } from '@/components/landing/docs'
+import { BlogSection } from '@/components/landing/blog'
 import { CTA } from '@/components/landing/cta'
 import { Footer } from '@/components/landing/footer'
 import { AppShell } from '@/components/layout/app-shell'
@@ -29,6 +31,8 @@ function LandingView() {
         <Integrations />
         <Pricing />
         <Testimonials />
+        <DocsSection />
+        <BlogSection />
         <Faq />
         <CTA />
       </main>

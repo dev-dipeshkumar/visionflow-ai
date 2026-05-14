@@ -1,6 +1,5 @@
 'use client'
 
-import { useAppStore } from '@/lib/store'
 import { Bot, Github, Twitter, Linkedin, Mail, BookOpen } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
@@ -16,18 +15,6 @@ const socialLinks = [
 ]
 
 export function Footer() {
-  const { setViewMode, setActivePage } = useAppStore()
-
-  const handleLinkClick = (link: string) => {
-    if (link === 'API Docs') {
-      setActivePage('docs')
-      setViewMode('app')
-    } else if (link === 'Features' || link === 'Workflow' || link === 'Pricing' || link === 'Integrations') {
-      // For product links that map to landing sections, stay on landing page
-      // The anchor href will handle scrolling
-    }
-  }
-
   return (
     <footer className="bg-background border-t border-border">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
@@ -69,13 +56,13 @@ export function Footer() {
               {productLinks.map((link) => (
                 <li key={link}>
                   {link === 'API Docs' ? (
-                    <button
-                      onClick={() => handleLinkClick(link)}
+                    <a
+                      href="#docs"
                       className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
                       <BookOpen className="size-3.5" />
                       {link}
-                    </button>
+                    </a>
                   ) : (
                     <a
                       href={`#${link.toLowerCase()}`}
@@ -97,12 +84,21 @@ export function Footer() {
             <ul className="space-y-3">
               {companyLinks.map((link) => (
                 <li key={link}>
-                  <a
-                    href="#"
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link}
-                  </a>
+                  {link === 'Blog' ? (
+                    <a
+                      href="#blog"
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link}
+                    </a>
+                  ) : (
+                    <a
+                      href="#"
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
