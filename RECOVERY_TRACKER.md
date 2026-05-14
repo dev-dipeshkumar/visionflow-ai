@@ -10,7 +10,7 @@
 - [x] Layout system — AppShell with Sidebar + Header + PageContent routing
 - [x] Sidebar/navigation — Zustand-driven SPA page switching (9 pages)
 - [x] Dashboard improvements — Welcome banner, quick actions, sparklines, pipeline, deadlines, activity filters
-- [ ] Leads panel enterprise CRM
+- [x] Leads panel enterprise CRM
 - [ ] Enterprise Docs system
 - [ ] Team tester accounts
 - [ ] Feedback system
@@ -46,3 +46,19 @@
 - Agent Status: "View All" link to navigate to full agents page
 - ScrollArea wrapper: proper scrollable content area within the AppShell layout
 - Consistent padding (p-4 md:p-6) for dashboard content
+
+### Leads Panel Enterprise CRM (14-05-2026)
+- Expanded leads data: 10 → 20 leads with full enterprise fields (phone, location, website, companySize, revenue, createdAt, lastContact, tags)
+- Added `leadActivities` data: 23 per-lead activity records for timeline view
+- Added `leadNotes` data: 10 per-lead notes for the notes tab
+- Lead Detail Dialog: 3-tab dialog (Overview, Activity, Notes) with full contact info, company details, lead score visualization, deal value card, timeline, and per-lead activity/notes timeline
+- Quick Actions on Lead Detail: Email, Call, Enrich AI buttons in dialog header
+- Advanced Filters Panel: expandable filter bar with 6 criteria (Industry, Source, Score Min/Max, Date From/To) with Clear All reset
+- Bulk Selection: checkbox on each lead card and table row, select-all in table header
+- Bulk Actions Bar: floating action bar (Send Email, Enrich AI, Add Tag, Export, Delete) appears when leads are selected
+- Import/Export Buttons: Export CSV and Import CSV buttons in page header
+- Quick Contact Actions: Email, Call, Enrich AI action buttons on hover for each lead card and table row
+- Tags Display: lead tags shown on cards and in detail dialog with tag badges
+- Stats Bar: expanded from 4 to 6 stats (added Won Deals, Won Revenue)
+- Mobile Pipeline View: vertical stacking of pipeline columns on mobile, horizontal scroll on desktop
+- Fixed Framer Motion `ease` type: cast as `const` tuple to satisfy TypeScript
