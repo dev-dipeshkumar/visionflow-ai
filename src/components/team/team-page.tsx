@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { teamAccounts } from '@/lib/data'
+import { teamAccounts, bugs } from '@/lib/data'
 import {
   Card,
   CardHeader,
@@ -54,6 +54,11 @@ import {
   ShieldCheck,
   Copy,
   Check,
+  Bug,
+  MessageSquare,
+  Tag,
+  AlertCircle,
+  ArrowUpDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -71,6 +76,23 @@ const statusConfig = {
   offline: { label: 'Offline', dotClass: 'bg-gray-400', className: 'bg-gray-500/15 text-gray-500 border-gray-500/25' },
   away: { label: 'Away', dotClass: 'bg-amber-500', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
 } as const
+
+// ─── Bug Priority & Status Config ────────────────────────────────────────
+
+const bugPriorityConfig = {
+  high: { label: 'High', className: 'bg-red-500/15 text-red-600 border-red-500/25' },
+  medium: { label: 'Medium', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
+  low: { label: 'Low', className: 'bg-blue-500/15 text-blue-600 border-blue-500/25' },
+} as const
+
+const bugStatusConfig = {
+  open: { label: 'Open', dotClass: 'bg-red-500', className: 'bg-red-500/15 text-red-600 border-red-500/25' },
+  'in-progress': { label: 'In Progress', dotClass: 'bg-amber-500', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
+  resolved: { label: 'Resolved', dotClass: 'bg-emerald-500', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
+} as const
+
+type BugPriority = keyof typeof bugPriorityConfig
+type BugStatus = keyof typeof bugStatusConfig
 
 // ─── Animation Variants ───────────────────────────────────────────────────
 
@@ -509,6 +531,238 @@ function TeamMemberCard({ member, isExpanded, onToggle }: {
   )
 }
 
+// ─── Tester Feedback Section ─────────────────────────────────────────────
+
+function TesterFeedbackSection() {
+  const testerNames = teamAccounts.filter((m) => m.isTester).map((m) => m.name)
+  const testerBugs = bugs.filter((b) => testerNames.includes(b.reporter))
+  const [expandedBugId, setExpandedBugId] = useState<string | null>(null)
+  const [bugFilter, setBugFilter] = useState<string>('all')
+
+  const openCount = testerBugs.filter((b) => b.status === 'open').length
+  const inProgressCount = testerBugs.filter((b) => b.status === 'in-progress').length
+  const resolvedCount = testerBugs.filter((b) => b.status === 'resolved').length
+
+  const filteredBugs = useMemo(() => {
+    if (bugFilter === 'all') return testerBugs
+    return testerBugs.filter((b) => b.status === bugFilter)
+  }, [bugFilter, testerBugs])
+
+  // Group bugs by reporter
+  const bugsByReporter = useMemo(() => {
+    const grouped: Record<string, typeof testerBugs> = {}
+    for (const bug of filteredBugs) {
+      if (!grouped[bug.reporter]) grouped[bug.reporter] = []
+      grouped[bug.reporter].push(bug)
+    }
+    return grouped
+  }, [filteredBugs])
+
+  return (
+    <div className="space-y-4">
+      {/* Section header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bug className="h-5 w-5 text-red-500" />
+          <h2 className="text-lg font-semibold">Tester Feedback</h2>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border bg-amber-500/15 text-amber-600 border-amber-500/25">
+            {testerBugs.length} Reports
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'open', label: 'Open' },
+            { key: 'in-progress', label: 'Active' },
+            { key: 'resolved', label: 'Fixed' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setBugFilter(tab.key)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                bugFilter === tab.key
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="py-3 border-red-500/15">
+          <CardContent className="px-3 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-red-500/10 text-red-500">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Open</p>
+              <p className="text-lg font-bold">{openCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="py-3 border-amber-500/15">
+          <CardContent className="px-3 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-amber-500/10 text-amber-500">
+              <ArrowUpDown className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">In Progress</p>
+              <p className="text-lg font-bold">{inProgressCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="py-3 border-emerald-500/15">
+          <CardContent className="px-3 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-emerald-500/10 text-emerald-500">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Resolved</p>
+              <p className="text-lg font-bold">{resolvedCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bugs grouped by tester */}
+      <div className="space-y-5">
+        {Object.entries(bugsByReporter).map(([reporter, reporterBugs]) => {
+          const tester = teamAccounts.find((m) => m.name === reporter)
+          return (
+            <div key={reporter} className="space-y-3">
+              {/* Reporter header */}
+              <div className="flex items-center gap-2.5">
+                <Avatar className="h-7 w-7 border border-amber-500/30">
+                  <AvatarFallback className="bg-amber-500/15 text-amber-600 font-bold text-[10px]">
+                    {tester?.avatar || getInitials(reporter)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{reporter}</p>
+                  <p className="text-[10px] text-muted-foreground">{reporterBugs.length} bug{reporterBugs.length !== 1 ? 's' : ''} reported</p>
+                </div>
+              </div>
+
+              {/* Bug cards */}
+              <div className="ml-5 pl-4 border-l-2 border-amber-500/20 space-y-2">
+                {reporterBugs.map((bug) => {
+                  const priority = bugPriorityConfig[bug.priority as BugPriority] ?? bugPriorityConfig.low
+                  const status = bugStatusConfig[bug.status as BugStatus] ?? bugStatusConfig.open
+                  const isExpanded = expandedBugId === bug.id
+
+                  return (
+                    <motion.div
+                      key={bug.id}
+                      variants={itemVariants}
+                      whileHover={{ scale: 1.005 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                    >
+                      <Card
+                        className="cursor-pointer transition-colors hover:bg-muted/30 py-0 gap-0"
+                        onClick={() => setExpandedBugId(isExpanded ? null : bug.id)}
+                      >
+                        <CardHeader className="px-3 pt-3 pb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-muted-foreground shrink-0">{bug.id}</span>
+                            <Separator orientation="vertical" className="h-3" />
+                            <CardTitle className="text-xs leading-tight truncate">{bug.title}</CardTitle>
+                            <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="px-3 pb-3 space-y-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className={`text-[9px] px-1 py-0 h-4 border ${priority.className}`}>
+                              {priority.label}
+                            </Badge>
+                            <Badge variant="outline" className={`text-[9px] px-1 py-0 h-4 border ${status.className}`}>
+                              <span className={`h-1 w-1 rounded-full shrink-0 ${status.dotClass}`} />
+                              {status.label}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground ml-1">
+                              Assigned: <span className="text-foreground font-medium">{bug.assignee}</span>
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Tag className="h-2.5 w-2.5 text-muted-foreground" />
+                            {bug.labels.map((label) => (
+                              <Badge key={label} variant="secondary" className="text-[9px] px-1 py-0 h-3.5 font-normal">
+                                {label}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              <span>Created: {new Date(bug.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+
+                          {/* Expandable description */}
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.div
+                                key="desc"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                className="overflow-hidden"
+                              >
+                                <Separator className="mb-2" />
+                                <div className="rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground leading-relaxed">
+                                  <div className="flex items-center gap-1 mb-1 font-medium text-foreground">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Description
+                                  </div>
+                                  {bug.description}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+
+        {filteredBugs.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8">
+            <Bug className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">No tester feedback found</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Bugs reported by testers will appear here</p>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Info card */}
+      <Card className="border-amber-500/15 bg-gradient-to-r from-amber-500/5 to-transparent py-3">
+        <CardContent className="px-4 flex items-start gap-3">
+          <FlaskConical className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">How Tester Feedback Works</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Tester accounts use the <strong>Bug Tracker</strong> panel in their sidebar to report bugs found during testing.
+              Those bug reports automatically appear here in the <strong>Tester Feedback</strong> section, organized by tester name.
+              As the admin, you can review each bug, assign it to a team member, and track resolution progress.
+              Only bugs reported by tester accounts appear in this section — bugs reported by other team members are tracked separately.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────
 
 export function TeamPage() {
@@ -753,6 +1007,9 @@ export function TeamPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Tester Feedback Section ──────────────────────────────────── */}
+      <TesterFeedbackSection />
 
       {/* ── Team Member List ───────────────────────────────────────── */}
       <div className="space-y-3">

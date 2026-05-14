@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { bugs } from '@/lib/data'
+import { useAppStore } from '@/lib/store'
 import {
   Card,
   CardHeader,
@@ -225,21 +226,27 @@ function BugCard({
 // ─── Main Component ───────────────────────────────────────────────────────
 
 export function BugsPage() {
+  const { currentUser } = useAppStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
+  // For tester accounts, only show bugs they reported
+  const visibleBugs = currentUser?.isTester
+    ? bugs.filter((b) => b.reporter === currentUser.name)
+    : bugs
+
   // Quick stats
-  const openCount = bugs.filter((b) => b.status === 'open').length
-  const inProgressCount = bugs.filter((b) => b.status === 'in-progress').length
-  const resolvedCount = bugs.filter((b) => b.status === 'resolved').length
-  const highPriorityCount = bugs.filter(
+  const openCount = visibleBugs.filter((b) => b.status === 'open').length
+  const inProgressCount = visibleBugs.filter((b) => b.status === 'in-progress').length
+  const resolvedCount = visibleBugs.filter((b) => b.status === 'resolved').length
+  const highPriorityCount = visibleBugs.filter(
     (b) => b.priority === 'high' && b.status !== 'resolved'
   ).length
 
   // Filtered bugs
   const filteredBugs = useMemo(() => {
-    return bugs.filter((bug) => {
+    return visibleBugs.filter((bug) => {
       const matchesSearch =
         search === '' ||
         bug.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -290,7 +297,7 @@ export function BugsPage() {
     },
   ]
 
-  const totalBugs = bugs.length
+  const totalBugs = visibleBugs.length
   const resolvedPct = totalBugs > 0 ? Math.round((resolvedCount / totalBugs) * 100) : 0
 
   return (
@@ -309,13 +316,15 @@ export function BugsPage() {
               Bug Tracker
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Track, prioritize, and resolve issues
+              {currentUser?.isTester
+                ? `Report and track bugs found during testing — ${currentUser.name}`
+                : 'Track, prioritize, and resolve issues'}
             </p>
           </div>
 
           <Button className="h-9 bg-vf-emerald hover:bg-vf-emerald/90 text-white">
             <Plus className="h-4 w-4 mr-1.5" />
-            Report Bug
+            {currentUser?.isTester ? 'Report New Bug' : 'Report Bug'}
           </Button>
         </div>
 

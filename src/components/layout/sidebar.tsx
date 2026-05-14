@@ -34,22 +34,32 @@ interface NavItem {
   pageId: PageId
   icon: React.ComponentType<{ className?: string }>
   showBadge?: boolean
+  /** Who can see this item? 'all' | 'admin' | 'tester' */
+  visibleTo: string[]
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', pageId: 'dashboard', icon: LayoutDashboard },
-  { label: 'CRM Pipeline', pageId: 'crm', icon: Users },
-  { label: 'AI Agents', pageId: 'agents', icon: Bot },
-  { label: 'Outreach', pageId: 'outreach', icon: Send },
-  { label: 'Workflows', pageId: 'workflows', icon: Workflow },
-  { label: 'Projects', pageId: 'projects', icon: FolderOpen },
-  { label: 'AI Chat', pageId: 'chat', icon: MessageSquare, showBadge: true },
-  { label: 'Analytics', pageId: 'analytics', icon: BarChart3 },
-  { label: 'Docs', pageId: 'docs', icon: BookOpen },
-  { label: 'Team & Testers', pageId: 'team', icon: UserCog },
-  { label: 'Bug Tracker', pageId: 'bugs', icon: Bug },
-  { label: 'Settings', pageId: 'settings', icon: Settings },
+const allNavItems: NavItem[] = [
+  { label: 'Dashboard', pageId: 'dashboard', icon: LayoutDashboard, visibleTo: ['all'] },
+  { label: 'CRM Pipeline', pageId: 'crm', icon: Users, visibleTo: ['all'] },
+  { label: 'AI Agents', pageId: 'agents', icon: Bot, visibleTo: ['all'] },
+  { label: 'Outreach', pageId: 'outreach', icon: Send, visibleTo: ['all'] },
+  { label: 'Workflows', pageId: 'workflows', icon: Workflow, visibleTo: ['all'] },
+  { label: 'Projects', pageId: 'projects', icon: FolderOpen, visibleTo: ['all'] },
+  { label: 'AI Chat', pageId: 'chat', icon: MessageSquare, showBadge: true, visibleTo: ['all'] },
+  { label: 'Analytics', pageId: 'analytics', icon: BarChart3, visibleTo: ['all'] },
+  { label: 'Docs', pageId: 'docs', icon: BookOpen, visibleTo: ['all'] },
+  { label: 'Team & Testers', pageId: 'team', icon: UserCog, visibleTo: ['admin'] },
+  { label: 'Bug Tracker', pageId: 'bugs', icon: Bug, visibleTo: ['tester'] },
+  { label: 'Settings', pageId: 'settings', icon: Settings, visibleTo: ['all'] },
 ]
+
+/** Derive the role key for nav filtering from currentUser */
+function getNavRole(currentUser: { role: string; isTester: boolean } | null): string {
+  if (!currentUser) return 'all'
+  if (currentUser.isTester) return 'tester'
+  if (currentUser.role === 'admin') return 'admin'
+  return 'all' // manager / member see the "all" items
+}
 
 export function Sidebar() {
   const {
@@ -61,10 +71,24 @@ export function Sidebar() {
     setSidebarCollapsed,
     notifications,
     setViewMode,
+    currentUser,
   } = useAppStore()
 
   const isCollapsed = sidebarCollapsed
   const sidebarWidth = isCollapsed ? 72 : 260
+  const navRole = getNavRole(currentUser)
+
+  // Filter nav items based on current user's role
+  const navItems = allNavItems.filter((item) => {
+    if (item.visibleTo.includes('all')) return true
+    return item.visibleTo.includes(navRole)
+  })
+
+  // If the active page is no longer visible (role changed), redirect to dashboard
+  const visiblePageIds = new Set(navItems.map((i) => i.pageId))
+  if (!visiblePageIds.has(activePage)) {
+    setActivePage('dashboard')
+  }
 
   const sidebarContent = (
     <motion.aside
@@ -280,7 +304,7 @@ export function Sidebar() {
 
               <Separator className="bg-sidebar-border" />
 
-              {/* Navigation */}
+              {/* Mobile Navigation */}
               <ScrollArea className="flex-1 px-3 py-3">
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {

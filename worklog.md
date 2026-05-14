@@ -287,3 +287,37 @@ Stage Summary:
 - Header dynamically shows current user's name, email, role, avatar
 - All landing page CTAs route through login page (no direct app access)
 - Tester accounts can be tested by signing out and signing in
+
+---
+Task ID: 8
+Agent: Main
+Task: Role-based sidebar visibility — Team & Testers for Admin only, Bug Tracker for Testers only, Tester Feedback wired to Team page
+
+Work Log:
+- Rewrote sidebar.tsx with role-based nav filtering:
+  - Each nav item has `visibleTo: string[]` ('all', 'admin', 'tester')
+  - `getNavRole()` derives the role key from `currentUser` (isTester → 'tester', role=admin → 'admin', else 'all')
+  - Team & Testers (pageId: 'team') → visibleTo: ['admin'] — only admins see it
+  - Bug Tracker (pageId: 'bugs') → visibleTo: ['tester'] — only testers see it
+  - All other items → visibleTo: ['all'] — everyone sees them
+  - Auto-redirects to dashboard if activePage becomes invisible after role change
+- Added Tester Feedback section to Team & Testers page:
+  - Shows only bugs reported by tester accounts (Prince, Ronak, Mehul)
+  - Bugs grouped by reporter with avatar and count
+  - Quick stats: Open / In Progress / Resolved
+  - Filter tabs: All / Open / Active / Fixed
+  - Each bug card shows priority, status, assignee, labels, description (expandable)
+  - Info card explaining how tester feedback flows from Bug Tracker → Team page
+- Updated Bug Tracker page for tester context:
+  - Shows "Report and track bugs found during testing — {tester name}" subtitle
+  - "Report New Bug" button text for testers
+  - Testers only see bugs they reported (filtered by reporter name)
+- Updated bugs data in data.ts: Replaced generic reporter names (QA Tester Alpha, etc.) with real tester names (Prince Chauhan, Ronak Jain, Mehul Kumar)
+- Build passes cleanly (0 errors)
+
+Stage Summary:
+- Team & Testers sidebar: Admin only
+- Bug Tracker sidebar: Tester only
+- Tester Feedback section in Team page shows bugs reported by testers, grouped by reporter
+- Bug Tracker shows tester-specific bugs when logged in as tester
+- Complete flow: Tester reports bug in Bug Tracker → Bug appears in Admin's Team & Testers → Tester Feedback section
