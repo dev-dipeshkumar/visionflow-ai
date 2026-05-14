@@ -10,6 +10,7 @@ export type PageId =
   | 'chat' 
   | 'analytics' 
   | 'docs'
+  | 'team'
   | 'bugs'
   | 'settings'
 

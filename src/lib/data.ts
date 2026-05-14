@@ -277,14 +277,15 @@ export const docsVersions = [
 // ─── Team Accounts (enhanced) ─────────────────────────────────────────────
 
 export const teamAccounts = [
-  { id: '1', name: 'Alex Morgan', email: 'alex@company.com', role: 'Admin', status: 'online', avatar: 'AM', department: 'Leadership', lastActive: 'Now', isTester: false },
-  { id: '2', name: 'Sarah Chen', email: 'sarah@company.com', role: 'Manager', status: 'online', avatar: 'SC', department: 'Sales', lastActive: 'Now', isTester: false },
-  { id: '3', name: 'Mike Johnson', email: 'mike@company.com', role: 'Member', status: 'offline', avatar: 'MJ', department: 'Marketing', lastActive: '3 hrs ago', isTester: false },
-  { id: '4', name: 'Lisa Wang', email: 'lisa@company.com', role: 'Member', status: 'online', avatar: 'LW', department: 'Engineering', lastActive: 'Now', isTester: false },
-  { id: '5', name: 'QA Tester Alpha', email: 'qa-alpha@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'QA', department: 'QA', lastActive: '10 min ago', isTester: true },
-  { id: '6', name: 'QA Tester Beta', email: 'qa-beta@test.visionflow.ai', role: 'Tester', status: 'offline', avatar: 'QB', department: 'QA', lastActive: '1 day ago', isTester: true },
-  { id: '7', name: 'Staging Reviewer', email: 'staging@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'SR', department: 'QA', lastActive: '30 min ago', isTester: true },
-  { id: '8', name: 'E2E Test Runner', email: 'e2e@test.visionflow.ai', role: 'Tester', status: 'online', avatar: 'E2', department: 'QA', lastActive: '5 min ago', isTester: true },
+  // ─── Team Members ───────────────────────────────────────────────────
+  { id: '1', name: 'Alex Morgan', email: 'alex@visionflow.ai', role: 'Admin', status: 'online', avatar: 'AM', department: 'Leadership', lastActive: 'Now', isTester: false },
+  { id: '2', name: 'Sarah Chen', email: 'sarah@visionflow.ai', role: 'Manager', status: 'online', avatar: 'SC', department: 'Sales', lastActive: 'Now', isTester: false },
+  { id: '3', name: 'Mike Johnson', email: 'mike@visionflow.ai', role: 'Member', status: 'offline', avatar: 'MJ', department: 'Marketing', lastActive: '3 hrs ago', isTester: false },
+  { id: '4', name: 'Lisa Wang', email: 'lisa@visionflow.ai', role: 'Member', status: 'online', avatar: 'LW', department: 'Engineering', lastActive: 'Now', isTester: false },
+  // ─── Tester Accounts (bcrypt hashed passwords in database) ──────────
+  { id: '5', name: 'Prince Chauhan', email: 'prince.testing@visionflow.ai', role: 'Tester', status: 'online', avatar: 'PC', department: 'QA & Testing', lastActive: 'Now', isTester: true },
+  { id: '6', name: 'Ronak Jain', email: 'ronak.testing@visionflow.ai', role: 'Tester', status: 'online', avatar: 'RJ', department: 'QA & Testing', lastActive: '5 min ago', isTester: true },
+  { id: '7', name: 'Mehul Kumar', email: 'mehul.testing@visionflow.ai', role: 'Tester', status: 'online', avatar: 'MK', department: 'QA & Testing', lastActive: '10 min ago', isTester: true },
 ]
 
 // ─── Bug Tracking ─────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { ProjectsPage } from '@/components/projects/projects-page'
 import { ChatPage } from '@/components/chat/chat-page'
 import { AnalyticsPage } from '@/components/analytics/analytics-page'
 import { DocsPage } from '@/components/docs/docs-page'
+import { TeamPage } from '@/components/team/team-page'
 import { BugsPage } from '@/components/bugs/bugs-page'
 import { SettingsPage } from '@/components/settings/settings-page'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +25,7 @@ const pageComponents: Record<PageId, React.ComponentType> = {
   chat: ChatPage,
   analytics: AnalyticsPage,
   docs: DocsPage,
+  team: TeamPage,
   bugs: BugsPage,
   settings: SettingsPage,
 }

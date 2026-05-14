@@ -201,3 +201,48 @@ Stage Summary:
 - App sidebar "Docs" → stays as-is for authenticated users
 - Write Article feature concept: articles written in app → auto-published to landing blog
 - No more "blunder" of throwing new visitors into the app dashboard
+
+---
+Task ID: 6
+Agent: Main
+Task: Team Tester Accounts — Create 3 tester accounts with secure password hashing
+
+Work Log:
+- Updated Prisma schema: Added `passwordHash` (String?), `isTester` (Boolean, default false), `department` (String?) to User model
+- Created `src/lib/prisma.ts` — Prisma client singleton with global caching for dev
+- Installed `bcryptjs` + `@types/bcryptjs` for server-side password hashing
+- Created `prisma/seed.ts` — Comprehensive seed script that:
+  - Creates default tenant (VisionFlow AI HQ)
+  - Creates 4 team members (Alex, Sarah, Mike, Lisa) with bcrypt-hashed passwords
+  - Creates 3 tester accounts with bcrypt-hashed passwords (cost factor 12):
+    - Prince Chauhan: prince.testing@visionflow.ai / Prince@VF2026
+    - Ronak Jain: ronak.testing@visionflow.ai / Ronak@VF2026
+    - Mehul Kumar: mehul.testing@visionflow.ai / Mehul@VF2026
+- Created API routes:
+  - `POST /api/auth/login` — Authenticates user with email/password against bcrypt hash
+  - `POST /api/auth/verify` — Verifies user session by ID
+  - `GET /api/users` — Lists users with optional filters (isTester, role, tenantId), never exposes passwordHash
+- Updated `src/lib/data.ts` — Replaced old generic tester accounts (QA Alpha, QA Beta, etc.) with the 3 real tester accounts (Prince, Ronak, Mehul)
+- Created `src/components/team/team-page.tsx` — Enterprise Team & Tester page with:
+  - Quick stats (Total Accounts, Team Members, Tester Accounts, Online Now)
+  - Activity progress bar (online percentage)
+  - Tab switcher (All / Team / Testers)
+  - Tester Credentials section with reveal/hide password, copy-to-clipboard, security notice
+  - Team Member cards with expandable details showing role, authentication method, security info
+  - Login dialog for tester authentication verification via /api/auth/login
+  - Search and role filter
+- Updated Zustand store: Added 'team' to PageId union
+- Updated sidebar: Added 'Team & Testers' nav item with UserCog icon (between Docs and Bug Tracker)
+- Updated page-content router: Added TeamPage import and mapping
+- Ran Prisma migration (db push) and seed — all 7 accounts created successfully
+- Verified bcrypt hashes in database: All passwords use $2b$12$ format
+- Verified password comparison: Prince@VF2026 correctly matches stored hash
+- Build verified clean (0 errors), all API routes registered
+
+Stage Summary:
+- 3 tester accounts created with bcrypt-hashed passwords in SQLite database
+- Full authentication API (login, verify, user listing)
+- Enterprise Team & Tester page with credential management, login dialog, and security notices
+- Team page accessible from sidebar as "Team & Testers"
+- Passwords NEVER stored in plaintext — bcrypt with 12 rounds
+- Build passes cleanly, all 7 database users verified

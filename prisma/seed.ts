@@ -1,92 +1,188 @@
-import { db } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
-async function seed() {
-  // Create tenant
-  const tenant = await db.tenant.create({
-    data: {
-      name: 'VisionFlow Demo',
-      slug: 'visionflow-demo',
-      industry: 'AI Automation',
-      plan: 'professional',
+const prisma = new PrismaClient()
+
+async function main() {
+  console.log('🌱 Seeding database...')
+
+  // Create or find the default tenant
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: 'visionflow-hq' },
+    update: {},
+    create: {
+      name: 'VisionFlow AI HQ',
+      slug: 'visionflow-hq',
+      industry: 'SaaS',
+      plan: 'enterprise',
     },
   })
 
-  // Create user
-  await db.user.create({
-    data: {
+  console.log(`✅ Tenant: ${tenant.name} (${tenant.id})`)
+
+  // ─── Create Admin User ─────────────────────────────────────────────
+  const adminHash = await bcrypt.hash('Admin@VF2026', 12)
+  const admin = await prisma.user.upsert({
+    where: { email: 'alex@visionflow.ai' },
+    update: {},
+    create: {
       email: 'alex@visionflow.ai',
       name: 'Alex Morgan',
       role: 'admin',
+      passwordHash: adminHash,
+      isTester: false,
+      department: 'Leadership',
       tenantId: tenant.id,
+      isActive: true,
     },
   })
+  console.log(`✅ Admin: ${admin.name} (${admin.email})`)
 
-  // Create AI agents
-  const agentTypes = [
-    { name: 'Lead Scout', type: 'lead_research', description: 'Finds qualified leads from multiple sources', runCount: 1247, successRate: 94.2 },
-    { name: 'Prospect Intel', type: 'prospect_intel', description: 'Researches prospects and companies', runCount: 892, successRate: 91.5 },
-    { name: 'Outreach Pro', type: 'outreach', description: 'Generates personalized outreach messages', runCount: 3412, successRate: 88.7 },
-    { name: 'Follow-Up Engine', type: 'followup', description: 'Manages automated follow-ups', runCount: 5621, successRate: 86.3 },
-    { name: 'CRM Brain', type: 'crm', description: 'Tracks leads and predicts conversion', runCount: 8934, successRate: 93.1 },
-    { name: 'Proposal Forge', type: 'proposal', description: 'Generates proposals and contracts', runCount: 567, successRate: 90.8 },
-    { name: 'Meeting Pilot', type: 'meeting', description: 'Schedules meetings and transcribes calls', runCount: 342, successRate: 87.5 },
-    { name: 'Doc Processor', type: 'document', description: 'Processes documents and extracts data', runCount: 1234, successRate: 95.2 },
-    { name: 'Delivery Agent', type: 'delivery', description: 'AI-powered service delivery', runCount: 789, successRate: 92.4 },
-    { name: 'Revision Handler', type: 'revision', description: 'Manages revisions and approvals', runCount: 456, successRate: 89.1 },
-    { name: 'Analytics Oracle', type: 'analytics', description: 'Optimizes performance using analytics', runCount: 2345, successRate: 91.8 },
-    { name: 'Retention Engine', type: 'referral', description: 'Manages retention and referrals', runCount: 678, successRate: 85.3 },
-    { name: 'Workflow Orchestrator', type: 'workflow', description: 'Orchestrates automation workflows', runCount: 3456, successRate: 90.5 },
-    { name: 'Optimization AI', type: 'optimization', description: 'Learns and optimizes all strategies', runCount: 987, successRate: 88.9 },
-  ]
+  // ─── Create Team Members ───────────────────────────────────────────
+  const sarahHash = await bcrypt.hash('Sarah@VF2026', 12)
+  const sarah = await prisma.user.upsert({
+    where: { email: 'sarah@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'sarah@visionflow.ai',
+      name: 'Sarah Chen',
+      role: 'manager',
+      passwordHash: sarahHash,
+      isTester: false,
+      department: 'Sales',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Manager: ${sarah.name} (${sarah.email})`)
 
-  for (const agent of agentTypes) {
-    await db.aIAgent.create({
-      data: {
-        ...agent,
-        model: 'gpt-4',
-        status: agent.type === 'meeting' ? 'paused' : 'active',
-        tenantId: tenant.id,
-        capabilities: JSON.stringify(['search', 'analyze', 'generate']),
-        lastRunAt: new Date(Date.now() - Math.random() * 3600000),
-      },
-    })
-  }
+  const mikeHash = await bcrypt.hash('Mike@VF2026', 12)
+  const mike = await prisma.user.upsert({
+    where: { email: 'mike@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'mike@visionflow.ai',
+      name: 'Mike Johnson',
+      role: 'member',
+      passwordHash: mikeHash,
+      isTester: false,
+      department: 'Marketing',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Member: ${mike.name} (${mike.email})`)
 
-  // Create leads
-  const leads = [
-    { firstName: 'Sarah', lastName: 'Mitchell', email: 'sarah@techcorp.io', company: 'TechCorp', title: 'VP Marketing', status: 'qualified', score: 87, source: 'linkedin', industry: 'SaaS' },
-    { firstName: 'James', lastName: 'Rodriguez', email: 'james@innovate.co', company: 'Innovate Co', title: 'CEO', status: 'proposal', score: 92, source: 'apollo', industry: 'Fintech' },
-    { firstName: 'Emily', lastName: 'Chen', email: 'emily@dataflow.ai', company: 'DataFlow AI', title: 'CTO', status: 'new', score: 65, source: 'crunchbase', industry: 'AI/ML' },
-    { firstName: 'Michael', lastName: 'Park', email: 'michael@growthlab.com', company: 'GrowthLab', title: 'Head of Ops', status: 'contacted', score: 74, source: 'website', industry: 'Marketing' },
-    { firstName: 'Lisa', lastName: 'Thompson', email: 'lisa@designhub.io', company: 'DesignHub', title: 'Creative Director', status: 'negotiation', score: 89, source: 'referral', industry: 'Design' },
-  ]
+  const lisaHash = await bcrypt.hash('Lisa@VF2026', 12)
+  const lisa = await prisma.user.upsert({
+    where: { email: 'lisa@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'lisa@visionflow.ai',
+      name: 'Lisa Wang',
+      role: 'member',
+      passwordHash: lisaHash,
+      isTester: false,
+      department: 'Engineering',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Member: ${lisa.name} (${lisa.email})`)
 
-  for (const lead of leads) {
-    await db.lead.create({
-      data: {
-        ...lead,
-        tenantId: tenant.id,
-        tags: JSON.stringify([lead.industry]),
-      },
-    })
-  }
+  // ─── Create 3 TESTER ACCOUNTS ──────────────────────────────────────
 
-  // Create integrations
-  const integrationServices = ['linkedin', 'apollo', 'stripe', 'google', 'slack', 'crunchbase', 'zoom', 'upwork']
-  for (const service of integrationServices) {
-    await db.integration.create({
-      data: {
-        service,
-        status: 'connected',
-        tenantId: tenant.id,
-        lastSyncAt: new Date(Date.now() - Math.random() * 3600000),
-      },
-    })
-  }
+  // Tester 1: Prince Chauhan
+  const princeHash = await bcrypt.hash('Prince@VF2026', 12)
+  const prince = await prisma.user.upsert({
+    where: { email: 'prince.testing@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'prince.testing@visionflow.ai',
+      name: 'Prince Chauhan',
+      role: 'tester',
+      passwordHash: princeHash,
+      isTester: true,
+      department: 'QA & Testing',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Tester 1: ${prince.name} (${prince.email})`)
 
-  console.log('Seed data created successfully!')
+  // Tester 2: Ronak Jain
+  const ronakHash = await bcrypt.hash('Ronak@VF2026', 12)
+  const ronak = await prisma.user.upsert({
+    where: { email: 'ronak.testing@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'ronak.testing@visionflow.ai',
+      name: 'Ronak Jain',
+      role: 'tester',
+      passwordHash: ronakHash,
+      isTester: true,
+      department: 'QA & Testing',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Tester 2: ${ronak.name} (${ronak.email})`)
+
+  // Tester 3: Mehul Kumar
+  const mehulHash = await bcrypt.hash('Mehul@VF2026', 12)
+  const mehul = await prisma.user.upsert({
+    where: { email: 'mehul.testing@visionflow.ai' },
+    update: {},
+    create: {
+      email: 'mehul.testing@visionflow.ai',
+      name: 'Mehul Kumar',
+      role: 'tester',
+      passwordHash: mehulHash,
+      isTester: true,
+      department: 'QA & Testing',
+      tenantId: tenant.id,
+      isActive: true,
+    },
+  })
+  console.log(`✅ Tester 3: ${mehul.name} (${mehul.email})`)
+
+  // ─── Summary ────────────────────────────────────────────────────────
+  const allUsers = await prisma.user.findMany()
+  const testers = allUsers.filter(u => u.isTester)
+  const team = allUsers.filter(u => !u.isTester)
+
+  console.log('\n📋 ══════════════════════════════════════════════')
+  console.log('📋  SEED COMPLETE — Team & Tester Accounts')
+  console.log('📋 ══════════════════════════════════════════════')
+  console.log(`📋  Total Users: ${allUsers.length}`)
+  console.log(`📋  Team Members: ${team.length}`)
+  console.log(`📋  Tester Accounts: ${testers.length}`)
+  console.log('📋')
+  console.log('📋  TESTER CREDENTIALS:')
+  console.log('📋  ─────────────────────────────────────────────')
+  console.log('📋  Prince Chauhan')
+  console.log('📋    Email:    prince.testing@visionflow.ai')
+  console.log('📋    Password: Prince@VF2026')
+  console.log('📋')
+  console.log('📋  Ronak Jain')
+  console.log('📋    Email:    ronak.testing@visionflow.ai')
+  console.log('📋    Password: Ronak@VF2026')
+  console.log('📋')
+  console.log('📋  Mehul Kumar')
+  console.log('📋    Email:    mehul.testing@visionflow.ai')
+  console.log('📋    Password: Mehul@VF2026')
+  console.log('📋  ─────────────────────────────────────────────')
+  console.log('📋  ⚠️  Passwords are stored as bcrypt hashes (cost factor 12)')
+  console.log('📋  ⚠️  Never store or log plaintext passwords')
+  console.log('📋 ══════════════════════════════════════════════\n')
 }
 
-seed()
-  .catch(console.error)
-  .finally(() => db.$disconnect())
+main()
+  .then(async () => {
+    await prisma.$disconnect()
+  })
+  .catch(async (e) => {
+    console.error('❌ Seed failed:', e)
+    await prisma.$disconnect()
+    process.exit(1)
+  })

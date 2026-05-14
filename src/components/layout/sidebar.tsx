@@ -12,6 +12,7 @@ import {
   MessageSquare,
   BarChart3,
   BookOpen,
+  UserCog,
   Bug,
   Settings,
   ChevronLeft,
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
   { label: 'AI Chat', pageId: 'chat', icon: MessageSquare, showBadge: true },
   { label: 'Analytics', pageId: 'analytics', icon: BarChart3 },
   { label: 'Docs', pageId: 'docs', icon: BookOpen },
+  { label: 'Team & Testers', pageId: 'team', icon: UserCog },
   { label: 'Bug Tracker', pageId: 'bugs', icon: Bug },
   { label: 'Settings', pageId: 'settings', icon: Settings },
 ]
