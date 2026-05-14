@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { bugs } from '@/lib/data'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
+import {
+  bugList as seedBugs,
+  bugAnalytics,
+  type BugData,
+  type BugComment,
+} from '@/lib/data-bugs'
 import {
   Card,
   CardHeader,
@@ -17,209 +22,820 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip'
 import {
   Bug,
   Search,
-  Filter,
   Plus,
   Clock,
   AlertCircle,
   CheckCircle2,
   ArrowUpDown,
   ChevronRight,
-  MessageSquare,
   Tag,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  RefreshCw,
+  Download,
+  Filter,
+  Eye,
+  XCircle,
+  MessageSquare,
+  Paperclip,
+  Image,
+  FileText,
+  Video,
+  Camera,
+  Monitor,
+  ListChecks,
+  LayoutGrid,
+  BarChart3,
+  Send,
+  ArrowUpCircle,
+  CircleDot,
+  Ban,
+  Flame,
+  AlertTriangle,
+  Info,
+  ClipboardList,
+  TrendingDown,
+  Users,
+  Zap,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useToast } from '@/hooks/use-toast'
 
-// ─── Priority & Status Config ─────────────────────────────────────────────
+// ─── Config ────────────────────────────────────────────────────────────────
 
-const priorityConfig = {
-  high: { label: 'High', className: 'bg-red-500/15 text-red-600 border-red-500/25' },
-  medium: { label: 'Medium', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
-  low: { label: 'Low', className: 'bg-blue-500/15 text-blue-600 border-blue-500/25' },
+const severityConfig = {
+  critical: { label: 'Critical', className: 'bg-red-600/15 text-red-600 border-red-600/25', icon: Flame, dotColor: '#dc2626' },
+  high: { label: 'High', className: 'bg-orange-500/15 text-orange-600 border-orange-500/25', icon: AlertTriangle, dotColor: '#f97316' },
+  medium: { label: 'Medium', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25', icon: AlertCircle, dotColor: '#f59e0b' },
+  low: { label: 'Low', className: 'bg-blue-500/15 text-blue-600 border-blue-500/25', icon: Info, dotColor: '#3b82f6' },
 } as const
 
 const statusConfig = {
-  open: { label: 'Open', dotClass: 'bg-red-500', className: 'bg-red-500/15 text-red-600 border-red-500/25' },
-  'in-progress': { label: 'In Progress', dotClass: 'bg-amber-500', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
-  resolved: { label: 'Resolved', dotClass: 'bg-emerald-500', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
+  open: { label: 'Open', className: 'bg-red-500/15 text-red-600 border-red-500/25', icon: CircleDot, dotClass: 'bg-red-500' },
+  'under-review': { label: 'Under Review', className: 'bg-amber-500/15 text-amber-600 border-amber-500/25', icon: ArrowUpDown, dotClass: 'bg-amber-500' },
+  fixed: { label: 'Fixed', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25', icon: CheckCircle2, dotClass: 'bg-emerald-500' },
+  rejected: { label: 'Rejected', className: 'bg-gray-500/15 text-gray-500 border-gray-500/25', icon: Ban, dotClass: 'bg-gray-400' },
 } as const
+
+type BugSeverity = keyof typeof severityConfig
+type BugStatus = keyof typeof statusConfig
+type TabId = 'board' | 'list' | 'report' | 'analytics'
 
 // ─── Animation Variants ───────────────────────────────────────────────────
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
 }
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const },
-  },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
-type BugPriority = keyof typeof priorityConfig
-type BugStatus = keyof typeof statusConfig
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// ─── Bug Card ─────────────────────────────────────────────────────────────
+function daysBetween(a: string, b: string) {
+  return Math.ceil((new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60 * 24))
+}
 
-function BugCard({
-  bug,
-  isExpanded,
-  onToggle,
-}: {
-  bug: (typeof bugs)[number]
-  isExpanded: boolean
-  onToggle: () => void
-}) {
-  const priority = priorityConfig[bug.priority as BugPriority] ?? priorityConfig.low
-  const status = statusConfig[bug.status as BugStatus] ?? statusConfig.open
+// ─── Skeleton ──────────────────────────────────────────────────────────────
+
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-8 w-52 bg-muted/50 rounded-lg animate-pulse" />
+          <div className="h-4 w-80 bg-muted/30 rounded animate-pulse" />
+        </div>
+        <div className="h-9 w-32 bg-muted/50 rounded-md animate-pulse" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 bg-muted/40 rounded-xl animate-pulse" />
+        ))}
+      </div>
+      <div className="flex gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-9 w-24 bg-muted/40 rounded-md animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-64 bg-muted/30 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Report Bug Dialog ─────────────────────────────────────────────────────
+
+interface BugFormData {
+  title: string
+  severity: BugSeverity
+  module: string
+  description: string
+  stepsToReproduce: string
+  expectedBehavior: string
+  actualBehavior: string
+  environment: string
+}
+
+function ReportBugDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenChange: (o: boolean) => void; onSave: (data: BugFormData) => void }) {
+  const [form, setForm] = useState<BugFormData>({
+    title: '', severity: 'medium', module: '', description: '', stepsToReproduce: '', expectedBehavior: '', actualBehavior: '', environment: '',
+  })
+
+  const isValid = form.title.trim() && form.module.trim() && form.description.trim()
+
+  const handleSubmit = () => {
+    if (!isValid) return
+    onSave(form)
+    onOpenChange(false)
+    setForm({ title: '', severity: 'medium', module: '', description: '', stepsToReproduce: '', expectedBehavior: '', actualBehavior: '', environment: '' })
+  }
 
   return (
-    <motion.div
-      layout
-      variants={itemVariants}
-      whileHover={{ scale: 1.01, boxShadow: '0 8px 24px -6px rgba(0,0,0,.10)' }}
-      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-      className="group"
-    >
-      <Card
-        className="cursor-pointer transition-colors hover:bg-muted/30 py-0 gap-0"
-        onClick={onToggle}
-      >
-        <CardHeader className="px-4 pt-4 pb-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-mono text-muted-foreground shrink-0">
-                  {bug.id}
-                </span>
-                <Separator orientation="vertical" className="h-3.5" />
-                <CardTitle className="text-sm leading-tight truncate">
-                  {bug.title}
-                </CardTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Bug className="h-5 w-5 text-red-500" />Report New Bug</DialogTitle>
+          <DialogDescription>Provide detailed information to help the team reproduce and fix the issue.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Bug Title *</label>
+            <Input placeholder="Brief description of the bug" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} className="h-9" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Severity *</label>
+              <Select value={form.severity} onValueChange={(v) => setForm((p) => ({ ...p, severity: v as BugSeverity }))}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Module *</label>
+              <Select value={form.module} onValueChange={(v) => setForm((p) => ({ ...p, module: v }))}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select module" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CRM Pipeline">CRM Pipeline</SelectItem>
+                  <SelectItem value="AI Agents">AI Agents</SelectItem>
+                  <SelectItem value="Outreach">Outreach</SelectItem>
+                  <SelectItem value="Workflows">Workflows</SelectItem>
+                  <SelectItem value="Projects">Projects</SelectItem>
+                  <SelectItem value="AI Chat">AI Chat</SelectItem>
+                  <SelectItem value="Analytics">Analytics</SelectItem>
+                  <SelectItem value="Dashboard">Dashboard</SelectItem>
+                  <SelectItem value="Settings">Settings</SelectItem>
+                  <SelectItem value="Docs">Docs</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Description *</label>
+            <Textarea placeholder="Detailed description of the bug..." value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="text-sm" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Steps to Reproduce</label>
+            <Textarea placeholder="1. Go to...&#10;2. Click on...&#10;3. Observe..." value={form.stepsToReproduce} onChange={(e) => setForm((p) => ({ ...p, stepsToReproduce: e.target.value }))} rows={4} className="text-sm font-mono" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Expected Behavior</label>
+              <Textarea placeholder="What should happen?" value={form.expectedBehavior} onChange={(e) => setForm((p) => ({ ...p, expectedBehavior: e.target.value }))} rows={2} className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Actual Behavior</label>
+              <Textarea placeholder="What actually happens?" value={form.actualBehavior} onChange={(e) => setForm((p) => ({ ...p, actualBehavior: e.target.value }))} rows={2} className="text-sm" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Environment</label>
+            <Input placeholder="Browser, OS, device info" value={form.environment} onChange={(e) => setForm((p) => ({ ...p, environment: e.target.value }))} className="h-9" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Screenshots / Attachments</label>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/40 transition-colors cursor-pointer">
+              <Camera className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">Click to upload or drag & drop</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-1">PNG, JPG, MP4 up to 10MB</p>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline" className="h-9">Cancel</Button></DialogClose>
+          <Button onClick={handleSubmit} disabled={!isValid} className="h-9 bg-red-600 hover:bg-red-700 text-white">
+            <Bug className="h-4 w-4 mr-1.5" />Submit Bug Report
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Bug Detail Dialog ─────────────────────────────────────────────────────
+
+function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: BugData | null; open: boolean; onOpenChange: (o: boolean) => void; onStatusChange: (id: string, status: BugStatus) => void }) {
+  const [newComment, setNewComment] = useState('')
+  const [localComments, setLocalComments] = useState<BugComment[]>(bug?.comments ?? [])
+  const { toast } = useToast()
+
+  if (!bug) return null
+  const severity = severityConfig[bug.severity] ?? severityConfig.medium
+  const status = statusConfig[bug.status] ?? statusConfig.open
+  const SevIcon = severity.icon
+  const StatusIcon = status.icon
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return
+    const comment: BugComment = {
+      id: `c-${Date.now()}`,
+      author: 'Current User',
+      authorAvatar: 'CU',
+      content: newComment,
+      timestamp: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+      type: 'comment',
+    }
+    setLocalComments((prev) => [...prev, comment])
+    setNewComment('')
+    toast({ title: 'Comment Added', description: 'Your comment has been posted.' })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg flex items-center gap-2">
+                <span className="font-mono text-sm text-muted-foreground">{bug.id}</span>
+                <Separator orientation="vertical" className="h-5" />
+                <span className="truncate">{bug.title}</span>
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2 mt-2 flex-wrap">
+                <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-5 border ${severity.className}`}>
+                  <SevIcon className="h-3 w-3 mr-1" />{severity.label}
+                </Badge>
+                <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-5 border ${status.className}`}>
+                  <StatusIcon className="h-3 w-3 mr-1" />{status.label}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 h-5">{bug.module}</Badge>
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {/* Meta Info */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div><span className="text-muted-foreground">Reporter</span><p className="font-medium mt-0.5 flex items-center gap-1.5"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{bug.reporterEmail === 'prince.testing@visionflow.ai' ? 'PC' : bug.reporterEmail === 'ronak.testing@visionflow.ai' ? 'RJ' : 'MK'}</AvatarFallback></Avatar>{bug.reporter}</p></div>
+            <div><span className="text-muted-foreground">Assignee</span><p className="font-medium mt-0.5 flex items-center gap-1.5"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{getInitials(bug.assignee)}</AvatarFallback></Avatar>{bug.assignee}</p></div>
+            <div><span className="text-muted-foreground">Created</span><p className="font-medium mt-0.5">{formatDate(bug.createdAt)}</p></div>
+            <div><span className="text-muted-foreground">Updated</span><p className="font-medium mt-0.5">{formatDate(bug.updatedAt)}</p></div>
+          </div>
+
+          <Separator />
+
+          {/* Description */}
+          <div>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><AlertCircle className="h-4 w-4 text-muted-foreground" />Description</h4>
+            <p className="text-sm text-muted-foreground leading-relaxed">{bug.description}</p>
+          </div>
+
+          {/* Steps to Reproduce */}
+          {bug.stepsToReproduce.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><ClipboardList className="h-4 w-4 text-muted-foreground" />Steps to Reproduce</h4>
+              <ol className="space-y-1.5 pl-1">
+                {bug.stepsToReproduce.map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-muted text-[10px] font-bold shrink-0">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Expected vs Actual */}
+          <div className="grid grid-cols-2 gap-4">
+            {bug.expectedBehavior && (
+              <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 p-3">
+                <h5 className="text-xs font-semibold text-emerald-600 mb-1">Expected</h5>
+                <p className="text-xs text-muted-foreground leading-relaxed">{bug.expectedBehavior}</p>
               </div>
-              <CardDescription className="sr-only">
-                Bug {bug.id}: {bug.title}
-              </CardDescription>
-            </div>
-            <ChevronRight
-              className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${
-                isExpanded ? 'rotate-90' : ''
-              }`}
-            />
-          </div>
-        </CardHeader>
-
-        <CardContent className="px-4 pb-4 space-y-3">
-          {/* Priority & Status badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border ${priority.className}`}>
-              {priority.label}
-            </Badge>
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border ${status.className}`}>
-              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${status.dotClass}`} />
-              {status.label}
-            </Badge>
-          </div>
-
-          {/* Assignee & Reporter */}
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[8px] font-semibold">
-                  {getInitials(bug.assignee)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-muted-foreground">
-                Assignee: <span className="text-foreground font-medium">{bug.assignee}</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <MessageSquare className="h-3 w-3" />
-              <span>
-                Reporter: <span className="text-foreground font-medium">{bug.reporter}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Labels */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Tag className="h-3 w-3 text-muted-foreground" />
-            {bug.labels.map((label) => (
-              <Badge
-                key={label}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0 h-4 font-normal"
-              >
-                {label}
-              </Badge>
-            ))}
-          </div>
-
-          {/* Dates */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>Created: {formatDate(bug.createdAt)}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <ArrowUpDown className="h-3 w-3" />
-              <span>Updated: {formatDate(bug.updatedAt)}</span>
-            </div>
-          </div>
-
-          {/* Expandable description */}
-          <AnimatePresence initial={false}>
-            {isExpanded && (
-              <motion.div
-                key="description"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="overflow-hidden"
-              >
-                <Separator className="mb-3" />
-                <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground leading-relaxed">
-                  <div className="flex items-center gap-1.5 mb-1.5 font-medium text-foreground">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    Description
-                  </div>
-                  {bug.description}
-                </div>
-              </motion.div>
             )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    </motion.div>
+            {bug.actualBehavior && (
+              <div className="rounded-lg bg-red-500/5 border border-red-500/15 p-3">
+                <h5 className="text-xs font-semibold text-red-600 mb-1">Actual</h5>
+                <p className="text-xs text-muted-foreground leading-relaxed">{bug.actualBehavior}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Environment & Labels */}
+          <div className="grid grid-cols-2 gap-4">
+            {bug.environment && (
+              <div>
+                <h4 className="text-sm font-semibold mb-1 flex items-center gap-1.5"><Monitor className="h-4 w-4 text-muted-foreground" />Environment</h4>
+                <p className="text-xs text-muted-foreground">{bug.environment}</p>
+              </div>
+            )}
+            <div>
+              <h4 className="text-sm font-semibold mb-1 flex items-center gap-1.5"><Tag className="h-4 w-4 text-muted-foreground" />Labels</h4>
+              <div className="flex flex-wrap gap-1">
+                {bug.labels.map((label) => (
+                  <Badge key={label} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">{label}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Attachments */}
+          {bug.attachments.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Paperclip className="h-4 w-4 text-muted-foreground" />Attachments ({bug.attachments.length})</h4>
+              <div className="space-y-1.5">
+                {bug.attachments.map((att) => {
+                  const FileIcon = att.type === 'image' ? Image : att.type === 'video' ? Video : FileText
+                  return (
+                    <div key={att.id} className="flex items-center gap-2 text-xs p-2 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer">
+                      <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-medium flex-1 truncate">{att.name}</span>
+                      <span className="text-muted-foreground">{att.size}</span>
+                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Status Actions */}
+          <div>
+            <h4 className="text-sm font-semibold mb-2">Update Status</h4>
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(statusConfig) as [BugStatus, typeof statusConfig[BugStatus]][]).map(([key, cfg]) => {
+                const Icon = cfg.icon
+                return (
+                  <Button key={key} variant={bug.status === key ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => onStatusChange(bug.id, key)} disabled={bug.status === key}>
+                    <Icon className="h-3.5 w-3.5 mr-1" />{cfg.label}
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Comments */}
+          <div>
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><MessageSquare className="h-4 w-4 text-muted-foreground" />Comments ({localComments.length})</h4>
+            <div className="space-y-3 mb-4">
+              {localComments.map((comment) => (
+                <div key={comment.id} className="flex items-start gap-2.5">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarFallback className="text-[9px] font-bold bg-muted">{comment.authorAvatar}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold">{comment.author}</span>
+                      {comment.type !== 'comment' && (
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5">{comment.type.replace('-', ' ')}</Badge>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">{comment.timestamp}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{comment.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Add Comment */}
+            <div className="flex items-start gap-2">
+              <Textarea placeholder="Add a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} rows={2} className="text-xs flex-1" />
+              <Button size="sm" className="h-9 mt-0.5 bg-vf-teal hover:bg-vf-teal/90 text-white" onClick={handleAddComment} disabled={!newComment.trim()}>
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Board Tab (Kanban by status) ─────────────────────────────────────────
+
+function BoardTab({ bugs, onView, onStatusChange }: { bugs: BugData[]; onView: (b: BugData) => void; onStatusChange: (id: string, status: BugStatus) => void }) {
+  const columns: { key: BugStatus; label: string; config: typeof statusConfig[BugStatus] }[] = [
+    { key: 'open', label: 'Open', config: statusConfig.open },
+    { key: 'under-review', label: 'Under Review', config: statusConfig['under-review'] },
+    { key: 'fixed', label: 'Fixed', config: statusConfig.fixed },
+    { key: 'rejected', label: 'Rejected', config: statusConfig.rejected },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {columns.map((col) => {
+        const colBugs = bugs.filter((b) => b.status === col.key)
+        const Icon = col.config.icon
+        return (
+          <div key={col.key} className="space-y-3">
+            {/* Column Header */}
+            <div className="flex items-center gap-2 px-1">
+              <div className={`h-2.5 w-2.5 rounded-full ${col.config.dotClass}`} />
+              <h3 className="text-sm font-semibold">{col.label}</h3>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-auto">{colBugs.length}</Badge>
+            </div>
+
+            {/* Bug Cards */}
+            <ScrollArea className="h-[calc(100vh-420px)]">
+              <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-2 pr-1">
+                {colBugs.map((bug) => {
+                  const sev = severityConfig[bug.severity] ?? severityConfig.medium
+                  const SevIcon = sev.icon
+                  return (
+                    <motion.div key={bug.id} variants={itemVariants} whileHover={{ scale: 1.02 }} transition={{ type: 'spring', stiffness: 400, damping: 28 }}>
+                      <Card className="py-0 gap-0 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onView(bug)}>
+                        <CardContent className="px-3 py-2.5 space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-muted-foreground">{bug.id}</span>
+                            <Separator orientation="vertical" className="h-3" />
+                            <Badge variant="outline" className={`text-[9px] px-1 py-0 h-4 border ${sev.className}`}>
+                              <SevIcon className="h-2.5 w-2.5 mr-0.5" />{sev.label}
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-medium leading-tight line-clamp-2">{bug.title}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <Avatar className="h-4 w-4"><AvatarFallback className="text-[7px]">{getInitials(bug.assignee)}</AvatarFallback></Avatar>
+                            <span>{bug.assignee}</span>
+                            <span className="ml-auto">{bug.module}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+                {colBugs.length === 0 && (
+                  <div className="text-center py-6">
+                    <Bug className="h-6 w-6 text-muted-foreground/20 mx-auto mb-1" />
+                    <p className="text-[10px] text-muted-foreground/50">No bugs</p>
+                  </div>
+                )}
+              </motion.div>
+            </ScrollArea>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── List Tab ──────────────────────────────────────────────────────────────
+
+function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; onView: (b: BugData) => void; onStatusChange: (id: string, status: BugStatus) => void; onDelete: (b: BugData) => void }) {
+  const [search, setSearch] = useState('')
+  const [severityFilter, setSeverityFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [moduleFilter, setModuleFilter] = useState<string>('all')
+  const [sortField, setSortField] = useState<'createdAt' | 'severity' | 'updatedAt'>('createdAt')
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
+  const [page, setPage] = useState(0)
+  const perPage = 8
+
+  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+
+  const modules = useMemo(() => [...new Set(bugs.map((b) => b.module))].sort(), [bugs])
+
+  const filtered = useMemo(() => {
+    let list = [...bugs]
+    if (search) list = list.filter((b) => b.title.toLowerCase().includes(search.toLowerCase()) || b.id.toLowerCase().includes(search.toLowerCase()) || b.assignee.toLowerCase().includes(search.toLowerCase()) || b.labels.some((l) => l.toLowerCase().includes(search.toLowerCase())))
+    if (severityFilter !== 'all') list = list.filter((b) => b.severity === severityFilter)
+    if (statusFilter !== 'all') list = list.filter((b) => b.status === statusFilter)
+    if (moduleFilter !== 'all') list = list.filter((b) => b.module === moduleFilter)
+    list.sort((a, b) => {
+      if (sortField === 'severity') return sortDir === 'asc' ? severityOrder[a.severity] - severityOrder[b.severity] : severityOrder[b.severity] - severityOrder[a.severity]
+      return sortDir === 'asc' ? a[sortField].localeCompare(b[sortField]) : b[sortField].localeCompare(a[sortField])
+    })
+    return list
+  }, [bugs, search, severityFilter, statusFilter, moduleFilter, sortField, sortDir])
+
+  const paged = filtered.slice(page * perPage, (page + 1) * perPage)
+  const totalPages = Math.ceil(filtered.length / perPage)
+
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('desc') }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search bugs by title, ID, assignee, label..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
+        </div>
+        <Select value={severityFilter} onValueChange={(v) => { setSeverityFilter(v); setPage(0) }}>
+          <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Severity" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Severity</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0) }}>
+          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="under-review">Under Review</SelectItem>
+            <SelectItem value="fixed">Fixed</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setPage(0) }}>
+          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Module" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Modules</SelectItem>
+            {modules.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table Header */}
+      <div className="hidden lg:grid grid-cols-[80px_2fr_1fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b">
+        <span>ID</span>
+        <button onClick={() => toggleSort('createdAt')} className="flex items-center gap-1 hover:text-foreground transition-colors text-left">Title <ArrowUpDown className="h-3 w-3" /></button>
+        <span>Severity</span>
+        <span>Status</span>
+        <span>Module</span>
+        <span>Assignee</span>
+        <span>Actions</span>
+      </div>
+
+      {/* Bug Rows */}
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-2">
+        {paged.map((bug) => {
+          const sev = severityConfig[bug.severity] ?? severityConfig.medium
+          const status = statusConfig[bug.status] ?? statusConfig.open
+          const SevIcon = sev.icon
+          const StatusIcon = status.icon
+
+          return (
+            <motion.div key={bug.id} variants={itemVariants} whileHover={{ scale: 1.002 }} transition={{ type: 'spring', stiffness: 400, damping: 28 }}>
+              <Card className="py-0 gap-0 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onView(bug)}>
+                <CardContent className="px-4 py-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-[80px_2fr_1fr_1fr_1fr_1fr_auto] gap-2 lg:gap-3 items-center">
+                    <span className="text-xs font-mono text-muted-foreground">{bug.id}</span>
+                    <p className="text-sm font-medium truncate">{bug.title}</p>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border w-fit ${sev.className}`}>
+                      <SevIcon className="h-3 w-3 mr-1" />{sev.label}
+                    </Badge>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border w-fit ${status.className}`}>
+                      <StatusIcon className="h-3 w-3 mr-1" />{status.label}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 w-fit">{bug.module}</Badge>
+                    <div className="flex items-center gap-1.5 text-xs"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{getInitials(bug.assignee)}</AvatarFallback></Avatar>{bug.assignee}</div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onView(bug)}><Eye className="h-4 w-4 mr-2" />View Details</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onStatusChange(bug.id, 'fixed')}><CheckCircle2 className="h-4 w-4 mr-2" />Mark Fixed</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onStatusChange(bug.id, 'under-review')}><ArrowUpDown className="h-4 w-4 mr-2" />Under Review</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onStatusChange(bug.id, 'rejected')}><Ban className="h-4 w-4 mr-2" />Reject</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600" onClick={() => onDelete(bug)}><Trash2 className="h-4 w-4 mr-2" />Delete Bug</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+            <Bug className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No bugs found matching your criteria</p>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">{filtered.length} bug{filtered.length !== 1 ? 's' : ''}</p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-8" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Analytics Tab ─────────────────────────────────────────────────────────
+
+function AnalyticsTabView({ bugs }: { bugs: BugData[] }) {
+  const data = bugAnalytics
+  const maxDayTotal = Math.max(...data.bugsByDay.map((d) => d.opened + d.closed), 1)
+  const maxModuleCount = Math.max(...data.bugsByModule.map((d) => d.count), 1)
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Bugs', value: bugs.length, icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10' },
+          { label: 'Open', value: bugs.filter((b) => b.status === 'open').length, icon: CircleDot, color: 'text-red-500', bg: 'bg-red-500/10' },
+          { label: 'Avg Resolution', value: `${data.avgResolutionDays}d`, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Resolution Rate', value: `${data.resolutionRate}%`, icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        ].map((stat, i) => (
+          <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
+            <Card className="py-4">
+              <CardContent className="flex items-center gap-4 px-4">
+                <div className={`rounded-lg p-2.5 ${stat.bg} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold leading-tight">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bugs Opened vs Closed */}
+        <Card className="py-0 gap-0">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="h-4 w-4 text-blue-500" />Opened vs Closed (7 Days)</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-2.5">
+              {data.bugsByDay.map((day) => {
+                const total = day.opened + day.closed
+                const widthPct = (total / maxDayTotal) * 100
+                return (
+                  <div key={day.date} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-12 shrink-0">{day.date}</span>
+                    <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
+                      <div className="flex h-full" style={{ width: `${widthPct}%` }}>
+                        <div className="bg-red-500 h-full" style={{ width: `${(day.opened / Math.max(total, 1)) * 100}%` }} />
+                        <div className="bg-emerald-500 h-full" style={{ width: `${(day.closed / Math.max(total, 1)) * 100}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] w-16">
+                      <span className="text-red-500">+{day.opened}</span>
+                      <span className="text-emerald-500">-{day.closed}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-4 mt-3">
+              <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-red-500" /><span className="text-[10px] text-muted-foreground">Opened</span></div>
+              <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /><span className="text-[10px] text-muted-foreground">Closed</span></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bugs by Module */}
+        <Card className="py-0 gap-0">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-amber-500" />Bugs by Module</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-2.5">
+              {data.bugsByModule.map((m) => {
+                const widthPct = (m.count / maxModuleCount) * 100
+                return (
+                  <div key={m.module} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0 truncate">{m.module}</span>
+                    <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${widthPct}%` }} transition={{ duration: 0.6, ease: 'easeOut' as const }} className="h-full rounded" style={{ backgroundColor: m.color }} />
+                    </div>
+                    <span className="text-xs font-medium w-6 text-right">{m.count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Severity Distribution & Top Reporters */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Severity Distribution */}
+        <Card className="py-0 gap-0 lg:col-span-2">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><Flame className="h-4 w-4 text-orange-500" />Severity Distribution</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-4 gap-4">
+              {data.bugsBySeverity.map((s) => {
+                const pct = bugs.length > 0 ? (s.count / bugs.length) * 100 : 0
+                return (
+                  <div key={s.severity} className="text-center space-y-2">
+                    <div className="h-20 flex items-end justify-center">
+                      <motion.div initial={{ height: 0 }} animate={{ height: `${pct}%` }} transition={{ duration: 0.5, ease: 'easeOut' as const }} className="w-12 rounded-t" style={{ backgroundColor: s.color, minHeight: s.count > 0 ? 8 : 0 }} />
+                    </div>
+                    <p className="text-sm font-bold">{s.count}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.severity}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Reporters */}
+        <Card className="py-0 gap-0">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-vf-teal" />Top Reporters</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 space-y-3">
+            {data.topReporters.map((reporter, i) => (
+              <div key={reporter.name} className="flex items-center gap-3">
+                <span className="text-xs font-bold text-muted-foreground w-4 text-right">#{i + 1}</span>
+                <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] font-bold bg-muted">{reporter.avatar}</AvatarFallback></Avatar>
+                <span className="text-sm font-medium flex-1 truncate">{reporter.name}</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{reporter.count}</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
 
@@ -227,131 +843,125 @@ function BugCard({
 
 export function BugsPage() {
   const { currentUser } = useAppStore()
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { toast } = useToast()
+  const [bugs, setBugs] = useState<BugData[]>(seedBugs)
+  const [activeTab, setActiveTab] = useState<TabId>('board')
+  const [loading, setLoading] = useState(true)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [viewBug, setViewBug] = useState<BugData | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [deleteBug, setDeleteBug] = useState<BugData | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
-  // For tester accounts, only show bugs they reported
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // For tester accounts, filter bugs they reported
   const visibleBugs = currentUser?.isTester
     ? bugs.filter((b) => b.reporter === currentUser.name)
     : bugs
 
-  // Quick stats
+  // Stats
   const openCount = visibleBugs.filter((b) => b.status === 'open').length
-  const inProgressCount = visibleBugs.filter((b) => b.status === 'in-progress').length
-  const resolvedCount = visibleBugs.filter((b) => b.status === 'resolved').length
-  const highPriorityCount = visibleBugs.filter(
-    (b) => b.priority === 'high' && b.status !== 'resolved'
-  ).length
-
-  // Filtered bugs
-  const filteredBugs = useMemo(() => {
-    return visibleBugs.filter((bug) => {
-      const matchesSearch =
-        search === '' ||
-        bug.title.toLowerCase().includes(search.toLowerCase()) ||
-        bug.id.toLowerCase().includes(search.toLowerCase()) ||
-        bug.assignee.toLowerCase().includes(search.toLowerCase()) ||
-        bug.reporter.toLowerCase().includes(search.toLowerCase()) ||
-        bug.labels.some((l) => l.toLowerCase().includes(search.toLowerCase()))
-
-      const matchesFilter =
-        statusFilter === 'all' || bug.status === statusFilter
-
-      return matchesSearch && matchesFilter
-    })
-  }, [search, statusFilter])
-
-  function handleToggleExpand(id: string) {
-    setExpandedId((prev) => (prev === id ? null : id))
-  }
+  const reviewCount = visibleBugs.filter((b) => b.status === 'under-review').length
+  const fixedCount = visibleBugs.filter((b) => b.status === 'fixed').length
+  const criticalCount = visibleBugs.filter((b) => b.severity === 'critical' && b.status !== 'fixed' && b.status !== 'rejected').length
 
   const stats = [
-    {
-      label: 'Open Bugs',
-      value: openCount,
-      icon: Bug,
-      color: 'text-red-500',
-      bgClass: 'bg-red-500/10',
-    },
-    {
-      label: 'In Progress',
-      value: inProgressCount,
-      icon: Clock,
-      color: 'text-amber-500',
-      bgClass: 'bg-amber-500/10',
-    },
-    {
-      label: 'Resolved',
-      value: resolvedCount,
-      icon: CheckCircle2,
-      color: 'text-emerald-500',
-      bgClass: 'bg-emerald-500/10',
-    },
-    {
-      label: 'High Priority',
-      value: highPriorityCount,
-      icon: AlertCircle,
-      color: 'text-vf-rose',
-      bgClass: 'bg-vf-rose/10',
-    },
+    { label: 'Open', value: openCount, icon: CircleDot, color: 'text-red-500', bgClass: 'bg-red-500/10' },
+    { label: 'Under Review', value: reviewCount, icon: ArrowUpDown, color: 'text-amber-500', bgClass: 'bg-amber-500/10' },
+    { label: 'Fixed', value: fixedCount, icon: CheckCircle2, color: 'text-emerald-500', bgClass: 'bg-emerald-500/10' },
+    { label: 'Critical', value: criticalCount, icon: Flame, color: 'text-orange-500', bgClass: 'bg-orange-500/10' },
   ]
 
+  // Handlers
+  const handleReportBug = useCallback((data: BugFormData) => {
+    const newBug: BugData = {
+      id: `BUG-${String(bugs.length + 1).padStart(3, '0')}`,
+      title: data.title,
+      status: 'open',
+      severity: data.severity,
+      assignee: 'Unassigned',
+      reporter: currentUser?.name || 'Unknown',
+      reporterEmail: currentUser?.email || '',
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0],
+      labels: ['bug', data.module.toLowerCase().replace(/\s+/g, '-')],
+      module: data.module,
+      description: data.description,
+      stepsToReproduce: data.stepsToReproduce.split('\n').filter((s) => s.trim()),
+      expectedBehavior: data.expectedBehavior,
+      actualBehavior: data.actualBehavior,
+      environment: data.environment,
+      screenshotUrl: null,
+      comments: [],
+      attachments: [],
+    }
+    setBugs((prev) => [newBug, ...prev])
+    toast({ title: 'Bug Reported', description: `${data.title} has been submitted as ${data.severity} severity.` })
+  }, [bugs.length, currentUser, toast])
+
+  const handleStatusChange = useCallback((id: string, newStatus: BugStatus) => {
+    setBugs((prev) => prev.map((b) => b.id === id ? { ...b, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] } : b))
+    const statusLabel = statusConfig[newStatus].label
+    toast({ title: 'Status Updated', description: `Bug ${id} marked as ${statusLabel}.` })
+  }, [toast])
+
+  const handleDeleteBug = useCallback(() => {
+    if (!deleteBug) return
+    setBugs((prev) => prev.filter((b) => b.id !== deleteBug.id))
+    toast({ title: 'Bug Deleted', description: `${deleteBug.id} has been removed.`, variant: 'destructive' })
+    setDeleteBug(null)
+  }, [deleteBug, toast])
+
+  const handleExport = useCallback(() => {
+    const csv = ['ID,Title,Severity,Status,Module,Assignee,Reporter,Created,Updated'].concat(
+      visibleBugs.map((b) => `${b.id},"${b.title}",${b.severity},${b.status},${b.module},${b.assignee},${b.reporter},${b.createdAt},${b.updatedAt}`)
+    ).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'bug-tracker-export.csv'; a.click()
+    URL.revokeObjectURL(url)
+    toast({ title: 'Export Complete', description: 'Bug data exported as CSV.' })
+  }, [visibleBugs, toast])
+
+  const tabs: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'board', label: 'Board', icon: LayoutGrid },
+    { id: 'list', label: 'List', icon: ListChecks },
+    { id: 'report', label: 'Report', icon: Plus },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  ]
+
+  // Resolution progress
   const totalBugs = visibleBugs.length
-  const resolvedPct = totalBugs > 0 ? Math.round((resolvedCount / totalBugs) * 100) : 0
+  const resolvedPct = totalBugs > 0 ? Math.round(((visibleBugs.filter((b) => b.status === 'fixed').length + visibleBugs.filter((b) => b.status === 'rejected').length) / totalBugs) * 100) : 0
+
+  if (loading) return <PageSkeleton />
 
   return (
     <div className="min-h-screen flex flex-col gap-6 p-4 md:p-6">
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="flex flex-col gap-4"
-      >
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Bug className="h-6 w-6 text-vf-emerald" />
+              <Bug className="h-6 w-6 text-red-500" />
               Bug Tracker
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {currentUser?.isTester
                 ? `Report and track bugs found during testing — ${currentUser.name}`
-                : 'Track, prioritize, and resolve issues'}
+                : 'Track, prioritize, and resolve issues across all modules'}
             </p>
           </div>
-
-          <Button className="h-9 bg-vf-emerald hover:bg-vf-emerald/90 text-white">
-            <Plus className="h-4 w-4 mr-1.5" />
-            {currentUser?.isTester ? 'Report New Bug' : 'Report Bug'}
-          </Button>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search bugs by title, ID, assignee..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 pl-9 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none cursor-pointer pr-8"
-            >
-              <option value="all">All</option>
-              <option value="open">Open</option>
-              <option value="in-progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
-            <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rotate-90 pointer-events-none" />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="h-9" onClick={handleExport}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+            <Button className="h-9 bg-red-600 hover:bg-red-700 text-white" onClick={() => setReportOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />{currentUser?.isTester ? 'Report New Bug' : 'Report Bug'}
+            </Button>
           </div>
         </div>
       </motion.div>
@@ -359,17 +969,10 @@ export function BugsPage() {
       {/* ── Quick Stats ────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' }}
-          >
+          <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
             <Card className="py-4">
               <CardContent className="flex items-center gap-4 px-4">
-                <div className={`rounded-lg p-2.5 ${stat.bgClass} ${stat.color}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
+                <div className={`rounded-lg p-2.5 ${stat.bgClass} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className="text-2xl font-bold leading-tight">{stat.value}</p>
@@ -386,52 +989,75 @@ export function BugsPage() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-sm font-medium">Resolution Progress</p>
-              <p className="text-xs text-muted-foreground">
-                {resolvedCount} of {totalBugs} resolved
-              </p>
+              <p className="text-xs text-muted-foreground">{fixedCount + visibleBugs.filter((b) => b.status === 'rejected').length} of {totalBugs} resolved</p>
             </div>
             <Progress value={resolvedPct} className="h-2" />
           </div>
-          <span className="text-lg font-bold text-vf-emerald">{resolvedPct}%</span>
+          <span className="text-lg font-bold text-emerald-500">{resolvedPct}%</span>
         </CardContent>
       </Card>
 
-      {/* ── Bug List ───────────────────────────────────────────────── */}
-      <ScrollArea className="flex-1">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="flex flex-col gap-3 pb-4"
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredBugs.map((bug) => (
-              <BugCard
-                key={bug.id}
-                bug={bug}
-                isExpanded={expandedId === bug.id}
-                onToggle={() => handleToggleExpand(bug.id)}
-              />
-            ))}
-          </AnimatePresence>
-
-          {filteredBugs.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-12"
+      {/* ── Tab Switcher ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg w-fit">
+        {tabs.map((tab) => {
+          const TabIcon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => tab.id === 'report' ? setReportOpen(true) : setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                activeTab === tab.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Bug className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                No bugs found matching your criteria
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Try adjusting your search or filter
-              </p>
-            </motion.div>
+              <TabIcon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Tab Content ────────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: 'easeOut' as const }}
+        >
+          {activeTab === 'board' && (
+            <BoardTab bugs={visibleBugs} onView={(b) => { setViewBug(b); setViewOpen(true) }} onStatusChange={handleStatusChange} />
           )}
+          {activeTab === 'list' && (
+            <ListTab
+              bugs={visibleBugs}
+              onView={(b) => { setViewBug(b); setViewOpen(true) }}
+              onStatusChange={handleStatusChange}
+              onDelete={(b) => { setDeleteBug(b); setDeleteOpen(true) }}
+            />
+          )}
+          {activeTab === 'analytics' && <AnalyticsTabView bugs={visibleBugs} />}
         </motion.div>
-      </ScrollArea>
+      </AnimatePresence>
+
+      {/* ── Dialogs ────────────────────────────────────────────────── */}
+      <ReportBugDialog key={`report-${reportOpen}`} open={reportOpen} onOpenChange={setReportOpen} onSave={handleReportBug} />
+      <BugDetailDialog key={viewBug?.id ?? 'none'} bug={viewBug} open={viewOpen} onOpenChange={setViewOpen} onStatusChange={handleStatusChange} />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Bug Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteBug?.id}: {deleteBug?.title}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteBug} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
