@@ -63,15 +63,22 @@
 - Mobile Pipeline View: vertical stacking of pipeline columns on mobile, horizontal scroll on desktop
 - Fixed Framer Motion `ease` type: cast as `const` tuple to satisfy TypeScript
 
-### Enterprise Docs System (14-05-2026)
-- Added `docsCategories` data: 10 categories (Getting Started, CRM & Leads, AI Agents, Outreach, Workflow Automation, Analytics, Integrations, API Reference, Billing, Security) with icons and color classes
-- Added `docsArticles` data: 12 articles across categories with title, description, readTime, views, updatedAt
-- Docs Page: full documentation browser with search, category grid, and article list views
-- Browse Tab: 10 category cards with icon, color, and document count; clicking navigates to filtered article list
-- All Articles Tab: search bar + category filter dropdown + list of article cards with category badges, read time, view counts
-- Quick Stats Row: Total Articles, Categories, Total Views, Last Updated
-- Write Article button in header
-- Sidebar: added Docs link with BookOpen icon
+### Enterprise Docs System (14-05-2026) — UPGRADED
+- `docsCategories` data: 10 categories with description field added
+- `docsArticles` data: expanded from 12 → 30 articles with full enterprise fields: author, version, status (published/draft), helpful/notHelpful, tags[], relatedIds[], content (full markdown body)
+- `docsVersions` data: 12 version history entries for 4 articles (d1, d4, d7, d9) showing version progression
+- Article Detail View: full-page detail with breadcrumb navigation, article header (category badge, version badge, draft badge), meta row (views, read time, author, updated date), tags, and rendered markdown content
+- Markdown Renderer: custom renderer supporting h2/h3, lists, bold, blockquotes, tables, and code blocks
+- Table of Contents (TOC): auto-extracted from article headings, shown as sidebar navigation on xl+ screens
+- Bookmarks Tab: new third tab showing bookmarked articles, persisted in state; toggle bookmark from article row or article detail
+- AI Search Assistant: dialog-based AI search with fuzzy matching across title/description/tags/content, loading animation, suggested searches, and click-to-open results
+- Version History: collapsible panel in article detail showing all versions with author, date, and changes summary; current version highlighted
+- Helpful Feedback: thumbs up/down at article bottom with helpfulness percentage
+- Article Actions: Bookmark, Copy Link, Print, Version History buttons in article detail header
+- Related Articles: grid of related articles at bottom of detail view (based on relatedIds)
+- Browse Tab Enhancement: category cards now show description text; clicking navigates to filtered article list with back button
+- Article Rows: enhanced with author, version, draft badge, and bookmark toggle button with tooltip
+- Quick Stats: Total Articles, Published count, Total Views, Drafts count
 
 ### Bug Tracking System (14-05-2026)
 - Added `bugs` data: 8 bugs with id, title, status, priority, assignee, reporter, dates, labels, description
