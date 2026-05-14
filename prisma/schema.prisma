@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  industry     String?
+  plan         String   @default("starter")
+  settings     String?
+  logoUrl      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  users        User[]
+  leads        Lead[]
+  contacts     Contact[]
+  campaigns    Campaign[]
+  workflows    Workflow[]
+  projects     Project[]
+  agents       AIAgent[]
+  integrations Integration[]
+  invoices     Invoice[]
+  templates    Template[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  role      String   @default("member")
+  tenantId  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  activities Activity[]
+}
+
+model Lead {
+  id              String    @id @default(cuid())
+  firstName       String?
+  lastName        String?
+  email           String?
+  phone           String?
+  company         String?
+  title           String?
+  website         String?
+  linkedinUrl     String?
+  industry        String?
+  companySize     String?
+  revenue         String?
+  location        String?
+  status          String    @default("new")
+  score           Int       @default(0)
+  source          String?
+  tags            String?
+  notes           String?
+  lastContactedAt DateTime?
+  convertedAt     DateTime?
+  tenantId        String
+  assignedToId    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  conversations   Conversation[]
+  proposals       Proposal[]
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  contactId       String?   @unique
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  firstName String?
+  lastName  String?
+  email     String?
+  phone     String?
+  company   String?
+  title     String?
+  type      String   @default("prospect")
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  lead      Lead?
+  projects  ProjectContact[]
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  leadId      String
+  channel     String   @default("email")
+  direction   String   @default("outbound")
+  subject     String?
+  content     String?
+  status      String   @default("sent")
+  aiGenerated Boolean  @default(false)
+  sentAt      DateTime @default(now())
+  openedAt    DateTime?
+  repliedAt   DateTime?
+  createdAt   DateTime @default(now())
+  lead        Lead     @relation(fields: [leadId], references: [id])
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("email")
+  status          String   @default("draft")
+  targetAudience  String?
+  messageTemplate String?
+  sequenceSteps   String?
+  schedule        String?
+  stats           String?
+  tenantId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model AIAgent {
+  id           String    @id @default(cuid())
+  name         String
+  type         String
+  description  String?
+  config       String?
+  status       String    @default("active")
+  model        String    @default("gpt-4")
+  capabilities String?
+  lastRunAt    DateTime?
+  runCount     Int       @default(0)
+  successRate  Float     @default(0)
+  tenantId     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  executions   AgentExecution[]
+}
+
+model AgentExecution {
+  id          String    @id @default(cuid())
+  agentId     String
+  trigger     String?
+  input       String?
+  output      String?
+  status      String    @default("running")
+  duration    Int?
+  tokensUsed  Int?
+  cost        Float?
+  error       String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  agent       AIAgent   @relation(fields: [agentId], references: [id])
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("custom")
+  status      String   @default("draft")
+  nodes       String?
+  edges       String?
+  trigger     String?
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  executions  WorkflowExecution[]
+}
+
+model WorkflowExecution {
+  id          String    @id @default(cuid())
+  workflowId  String
+  status      String    @default("running")
+  currentNode String?
+  data        String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  type         String    @default("service")
+  status       String    @default("onboarding")
+  progress     Int       @default(0)
+  deadline     DateTime?
+  budget       Float?
+  tenantId     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  contacts     ProjectContact[]
+  deliverables Deliverable[]
+  milestones   Milestone[]
+}
+
+model ProjectContact {
+  id        String   @id @default(cuid())
+  projectId String
+  contactId String
+  role      String   @default("client")
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id])
+  contact   Contact  @relation(fields: [contactId], references: [id])
+}
+
+model Deliverable {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  type        String
+  status      String   @default("pending")
+  fileUrl     String?
+  version     Int      @default(1)
+  aiGenerated Boolean  @default(false)
+  feedback    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id])
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  project     Project   @relation(fields: [projectId], references: [id])
+}
+
+model Proposal {
+  id         String    @id @default(cuid())
+  leadId     String?
+  title      String
+  content    String?
+  value      Float?
+  currency   String    @default("USD")
+  status     String    @default("draft")
+  validUntil DateTime?
+  tenantId   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lead       Lead?     @relation(fields: [leadId], references: [id])
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  number          String    @unique
+  amount          Float
+  currency        String    @default("USD")
+  status          String    @default("draft")
+  dueDate         DateTime?
+  paidAt          DateTime?
+  stripeInvoiceId String?
+  tenantId        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+}
+
+model Integration {
+  id         String    @id @default(cuid())
+  service    String
+  status     String    @default("connected")
+  config     String?
+  lastSyncAt DateTime?
+  tenantId   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  content   String?
+  category  String?
+  isDefault Boolean  @default(false)
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String?
+  type        String
+  description String
+  metadata    String?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id])
+}
