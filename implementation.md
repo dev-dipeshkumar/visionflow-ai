@@ -1,6 +1,4 @@
-# implementation.md
-
-## VisionFlow AI — Enterprise Panel Implementation Recovery
+# VisionFlow AI — Enterprise Panel Implementation Recovery
 
 This document defines the full implementation recovery process for all enterprise application panels inside the VisionFlow AI platform.
 
