@@ -63,3 +63,30 @@ Stage Summary:
 - Dev server running on port 3000 with successful compilation
 - Code View and Live Preview synchronized
 - Project architecture preserved: single-page SPA with Zustand state management
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Implement Layout System (Phase 2, Step 1)
+
+Work Log:
+- Extended Zustand store with `viewMode: 'landing' | 'app'` and `setViewMode` action
+- Created `src/components/layout/page-content.tsx` — AnimatePresence page router switching 9 page components
+- Created `src/components/layout/app-shell.tsx` — AppShell layout with Sidebar + Header + PageContent
+- Updated `src/app/page.tsx` — switched to 'use client', renders LandingView or AppShell based on viewMode
+- Wired Hero CTA buttons (Start Automating, Start Free Trial, Sign In) to setViewMode('app')
+- Wired CTA section Start Free Trial button to setViewMode('app')
+- Made Sidebar logo clickable to return to landing (setViewMode('landing'))
+- Updated Header user dropdown: Settings → navigates to settings page, Log out → Back to Website
+- Added responsive sidebar margin handling via useIsMobile hook (no margin on mobile where sidebar is overlay)
+- All lint checks pass with zero errors
+- All compilations successful
+
+Stage Summary:
+- Complete Layout System implemented: Landing ↔ App view switching
+- Sidebar navigation functional with 9 pages
+- Header with search, theme toggle, notifications, user menu
+- Mobile-responsive: overlay sidebar on mobile, fixed sidebar on desktop
+- Landing page CTAs navigate to dashboard
+- Sidebar logo and header dropdown navigate back to landing
+- Page transitions with Framer Motion AnimatePresence

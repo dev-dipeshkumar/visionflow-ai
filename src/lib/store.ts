@@ -11,7 +11,11 @@ export type PageId =
   | 'analytics' 
   | 'settings'
 
+export type ViewMode = 'landing' | 'app'
+
 interface AppState {
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
   activePage: PageId
   setActivePage: (page: PageId) => void
   sidebarOpen: boolean
@@ -27,6 +31,8 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  viewMode: 'landing',
+  setViewMode: (mode) => set({ viewMode: mode }),
   activePage: 'dashboard',
   setActivePage: (page) => set({ activePage: page }),
   sidebarOpen: true,

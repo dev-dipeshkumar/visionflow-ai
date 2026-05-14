@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Play, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAppStore } from '@/lib/store'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -14,6 +15,7 @@ const fadeInUp = {
 }
 
 export function CTA() {
+  const { setViewMode } = useAppStore()
   return (
     <section className="relative overflow-hidden py-32 sm:py-40">
       {/* Radial glow from center */}
@@ -125,6 +127,7 @@ export function CTA() {
           <Button
             size="lg"
             className="bg-primary hover:bg-primary/90 rounded-full px-8 h-12 text-base font-medium shadow-lg glow-md"
+            onClick={() => setViewMode('app')}
           >
             Start Free Trial
             <ArrowRight className="size-4 ml-1" />

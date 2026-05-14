@@ -73,7 +73,7 @@ const pageInfo: Record<PageId, { title: string; subtitle: string }> = {
 }
 
 export function Header() {
-  const { activePage, sidebarOpen, setSidebarOpen, notifications, commandOpen, setCommandOpen } =
+  const { activePage, setActivePage, sidebarOpen, setSidebarOpen, notifications, commandOpen, setCommandOpen, setViewMode } =
     useAppStore()
   const { theme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
@@ -259,15 +259,15 @@ export function Header() {
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Billing</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActivePage('settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
+            <DropdownMenuItem onClick={() => setViewMode('landing')}>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+              <span>Back to Website</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

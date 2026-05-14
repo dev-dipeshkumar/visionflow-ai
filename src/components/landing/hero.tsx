@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAppStore } from '@/lib/store'
 import {
   Bot,
   ArrowRight,
@@ -35,6 +36,7 @@ const navLinks = ['Features', 'Workflow', 'Pricing', 'Integrations']
 
 export function Hero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { setViewMode } = useAppStore()
 
   return (
     <section className="relative min-h-screen overflow-hidden">
@@ -71,10 +73,10 @@ export function Hero() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setViewMode('app')}>
                 Sign In
               </Button>
-              <Button className="bg-primary hover:bg-primary/90 rounded-full px-5 text-sm">
+              <Button className="bg-primary hover:bg-primary/90 rounded-full px-5 text-sm" onClick={() => setViewMode('app')}>
                 Start Free Trial
               </Button>
             </div>
@@ -110,10 +112,10 @@ export function Hero() {
                   </a>
                 ))}
                 <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
-                  <Button variant="ghost" className="justify-start text-sm text-muted-foreground">
+                  <Button variant="ghost" className="justify-start text-sm text-muted-foreground" onClick={() => setViewMode('app')}>
                     Sign In
                   </Button>
-                  <Button className="bg-primary hover:bg-primary/90 rounded-full text-sm w-full">
+                  <Button className="bg-primary hover:bg-primary/90 rounded-full text-sm w-full" onClick={() => setViewMode('app')}>
                     Start Free Trial
                   </Button>
                 </div>
@@ -176,6 +178,7 @@ export function Hero() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 rounded-full px-8 h-12 text-base font-medium shadow-lg glow-sm"
+              onClick={() => setViewMode('app')}
             >
               Start Automating
               <ArrowRight className="size-4 ml-1" />

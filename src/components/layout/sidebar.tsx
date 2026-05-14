@@ -54,6 +54,7 @@ export function Sidebar() {
     sidebarCollapsed,
     setSidebarCollapsed,
     notifications,
+    setViewMode,
   } = useAppStore()
 
   const isCollapsed = sidebarCollapsed
@@ -68,8 +69,12 @@ export function Sidebar() {
         'transition-shadow duration-300'
       )}
     >
-      {/* Logo Area */}
-      <div className="flex h-16 items-center gap-3 px-4">
+      {/* Logo Area — click to return to landing */}
+      <button
+        onClick={() => setViewMode('landing')}
+        className="flex h-16 items-center gap-3 px-4 w-full hover:bg-sidebar-accent/30 transition-colors duration-200"
+        aria-label="Return to landing page"
+      >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-vf-teal">
           <Bot className="h-5 w-5 text-white" />
         </div>
@@ -86,7 +91,7 @@ export function Sidebar() {
             </motion.span>
           )}
         </AnimatePresence>
-      </div>
+      </button>
 
       <Separator className="bg-sidebar-border" />
 
@@ -253,15 +258,19 @@ export function Sidebar() {
                 'bg-sidebar border-r border-sidebar-border'
               )}
             >
-              {/* Logo Area */}
-              <div className="flex h-16 items-center gap-3 px-4">
+              {/* Logo Area — click to return to landing */}
+              <button
+                onClick={() => setViewMode('landing')}
+                className="flex h-16 items-center gap-3 px-4 w-full hover:bg-sidebar-accent/30 transition-colors duration-200"
+                aria-label="Return to landing page"
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-vf-teal">
                   <Bot className="h-5 w-5 text-white" />
                 </div>
                 <span className="overflow-hidden whitespace-nowrap text-base font-semibold text-sidebar-foreground">
                   VisionFlow AI
                 </span>
-              </div>
+              </button>
 
               <Separator className="bg-sidebar-border" />
 
