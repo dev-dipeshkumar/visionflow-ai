@@ -142,7 +142,19 @@ const steps = [
 
 const activeStepIndex = 8 // AI Financial Extraction is "active"
 
-function FloatingParticle({ delay, x, size }: { delay: number; x: number; size: number }) {
+// Pre-defined deterministic particle values to avoid hydration mismatch
+const particleConfigs = [
+  { x: -1.9, size: 4.2, duration: 3.5 },
+  { x: 1.7, size: 6.0, duration: 4.0 },
+  { x: 0.7, size: 5.3, duration: 3.8 },
+  { x: -0.3, size: 3.9, duration: 4.2 },
+  { x: 0.2, size: 3.4, duration: 3.6 },
+  { x: 1.2, size: 5.7, duration: 4.5 },
+  { x: 0.7, size: 4.7, duration: 3.9 },
+  { x: 1.0, size: 4.7, duration: 4.1 },
+]
+
+function FloatingParticle({ delay, x, size, duration }: { delay: number; x: number; size: number; duration: number }) {
   return (
     <motion.div
       className="absolute rounded-full"
@@ -158,7 +170,7 @@ function FloatingParticle({ delay, x, size }: { delay: number; x: number; size: 
         opacity: [0.2, 0.6, 0.2],
       }}
       transition={{
-        duration: 3 + Math.random() * 2,
+        duration,
         delay,
         repeat: Infinity,
         ease: 'easeInOut',
@@ -271,12 +283,12 @@ export function Workflow() {
             <motion.div
               className="absolute inset-0"
               style={{
+                transformOrigin: 'center top',
                 background: 'linear-gradient(to bottom, oklch(0.65 0.19 160 / 60%), oklch(0.65 0.14 185 / 60%), oklch(0.65 0.19 160 / 60%))',
               }}
               initial={{ scaleY: 0 }}
               animate={isInView ? { scaleY: 1 } : { scaleY: 0 }}
               transition={{ duration: 1.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              originY={0}
             />
             {/* Animated pulse on the line */}
             <motion.div
@@ -291,12 +303,13 @@ export function Workflow() {
 
           {/* Floating particles along the line */}
           <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 pointer-events-none">
-            {[...Array(8)].map((_, i) => (
+            {particleConfigs.map((p, i) => (
               <FloatingParticle
                 key={i}
                 delay={i * 0.5}
-                x={-2 + Math.random() * 4}
-                size={3 + Math.random() * 3}
+                x={p.x}
+                size={p.size}
+                duration={p.duration}
               />
             ))}
           </div>
