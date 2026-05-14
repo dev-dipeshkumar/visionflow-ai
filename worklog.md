@@ -162,3 +162,20 @@ Work Log:
 Stage Summary:
 - Enterprise Docs system complete with 30 articles, version tracking, AI search, bookmarks, and rich article detail view
 - Build passes cleanly
+
+---
+Task ID: 1b
+Agent: Main
+Task: Make Docs visible in header nav + API Docs link in footer connects to Docs page
+
+Work Log:
+- Updated hero.tsx: Added 'Docs' to navLinks array, imported BookOpen icon, added setActivePage to useAppStore destructuring
+- Desktop nav: Docs link renders as a button that calls setActivePage('docs') + setViewMode('app')
+- Mobile nav: Same Docs button with BookOpen icon + mobile menu auto-close
+- Updated footer.tsx: 'API Docs' link now renders as a button with BookOpen icon that navigates to app Docs page
+- Both footer and hero links switch from landing view → app view → docs page
+- Build verified clean (0 errors)
+
+Stage Summary:
+- Docs is now visible in the landing page header nav (desktop + mobile)
+- API Docs in footer connects to the app's Docs page where API reference articles exist
