@@ -16,6 +16,7 @@ import { BlogSection } from '@/components/landing/blog'
 import { CTA } from '@/components/landing/cta'
 import { Footer } from '@/components/landing/footer'
 import { AppShell } from '@/components/layout/app-shell'
+import { LoginPage } from '@/components/auth/login-page'
 import { AnimatePresence, motion } from 'framer-motion'
 
 function LandingView() {
@@ -55,6 +56,17 @@ export default function Home() {
           transition={{ duration: 0.3 }}
         >
           <LandingView />
+        </motion.div>
+      ) : viewMode === 'login' ? (
+        <motion.div
+          key="login"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.3 }}
+          className="h-screen"
+        >
+          <LoginPage />
         </motion.div>
       ) : (
         <motion.div

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { useAppStore, type PageId } from '@/lib/store'
+import { useAppStore, type PageId, type CurrentUser } from '@/lib/store'
 import { motion } from 'framer-motion'
 import {
   Menu,
@@ -13,6 +13,8 @@ import {
   Settings,
   User,
   CreditCard,
+  ShieldCheck,
+  FlaskConical,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
@@ -70,6 +72,10 @@ const pageInfo: Record<PageId, { title: string; subtitle: string }> = {
     title: 'Documentation',
     subtitle: 'Knowledge base, guides, and API reference',
   },
+  team: {
+    title: 'Team & Testers',
+    subtitle: 'Manage team members and tester accounts',
+  },
   bugs: {
     title: 'Bug Tracker',
     subtitle: 'Track, prioritize, and resolve issues',
@@ -80,8 +86,41 @@ const pageInfo: Record<PageId, { title: string; subtitle: string }> = {
   },
 }
 
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function getRoleBadge(user: CurrentUser) {
+  if (user.isTester) {
+    return (
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/15 text-amber-600 border-amber-500/25">
+        <FlaskConical className="h-2.5 w-2.5 mr-0.5" />
+        Tester
+      </Badge>
+    )
+  }
+  if (user.role === 'admin') {
+    return (
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-violet-500/15 text-violet-600 border-violet-500/25">
+        <ShieldCheck className="h-2.5 w-2.5 mr-0.5" />
+        Admin
+      </Badge>
+    )
+  }
+  return (
+    <span className="text-xs leading-none text-muted-foreground capitalize">
+      {user.role}
+    </span>
+  )
+}
+
 export function Header() {
-  const { activePage, setActivePage, sidebarOpen, setSidebarOpen, notifications, commandOpen, setCommandOpen, setViewMode } =
+  const { activePage, setActivePage, sidebarOpen, setSidebarOpen, notifications, commandOpen, setCommandOpen, currentUser, signOut } =
     useAppStore()
   const { theme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
@@ -91,6 +130,13 @@ export function Header() {
   )
 
   const { title, subtitle } = pageInfo[activePage]
+
+  const displayName = currentUser?.name || 'Guest'
+  const displayEmail = currentUser?.email || ''
+  const displayInitials = currentUser ? getInitials(currentUser.name) : 'GU'
+  const avatarClass = currentUser?.isTester
+    ? 'bg-gradient-to-br from-amber-500 to-amber-600'
+    : 'bg-gradient-to-br from-primary to-vf-teal'
 
   return (
     <motion.header
@@ -239,11 +285,11 @@ export function Header() {
             >
               <Avatar className="h-9 w-9">
                 <AvatarImage
-                  src="https://avatar.vercel.sh/alexmorgan"
-                  alt="Alex Morgan"
+                  src={currentUser?.avatarUrl || `https://avatar.vercel.sh/${displayInitials}`}
+                  alt={displayName}
                 />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-vf-teal text-white text-xs font-semibold">
-                  AM
+                <AvatarFallback className={`${avatarClass} text-white text-xs font-semibold`}>
+                  {displayInitials}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -251,9 +297,12 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Alex Morgan</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
+                  {currentUser && getRoleBadge(currentUser)}
+                </div>
                 <p className="text-xs leading-none text-muted-foreground">
-                  Admin
+                  {displayEmail}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -273,9 +322,12 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setViewMode('landing')}>
+            <DropdownMenuItem
+              onClick={signOut}
+              className="text-red-600 focus:text-red-600 focus:bg-red-500/10"
+            >
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Back to Website</span>
+              <span>Sign Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

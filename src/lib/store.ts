@@ -14,7 +14,17 @@ export type PageId =
   | 'bugs'
   | 'settings'
 
-export type ViewMode = 'landing' | 'app'
+export type ViewMode = 'landing' | 'login' | 'app'
+
+export interface CurrentUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  isTester: boolean
+  department: string
+  avatarUrl?: string | null
+}
 
 interface AppState {
   viewMode: ViewMode
@@ -31,6 +41,9 @@ interface AppState {
   setChatOpen: (open: boolean) => void
   notifications: number
   setNotifications: (n: number) => void
+  currentUser: CurrentUser | null
+  setCurrentUser: (user: CurrentUser | null) => void
+  signOut: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -48,4 +61,7 @@ export const useAppStore = create<AppState>((set) => ({
   setChatOpen: (open) => set({ chatOpen: open }),
   notifications: 7,
   setNotifications: (n) => set({ notifications: n }),
+  currentUser: null,
+  setCurrentUser: (user) => set({ currentUser: user }),
+  signOut: () => set({ currentUser: null, viewMode: 'login', activePage: 'dashboard' }),
 }))

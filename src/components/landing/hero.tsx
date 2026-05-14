@@ -73,10 +73,10 @@ export function Hero() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setViewMode('app')}>
+              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setViewMode('login')}>
                 Sign In
               </Button>
-              <Button className="bg-primary hover:bg-primary/90 rounded-full px-5 text-sm" onClick={() => setViewMode('app')}>
+              <Button className="bg-primary hover:bg-primary/90 rounded-full px-5 text-sm" onClick={() => setViewMode('login')}>
                 Start Free Trial
               </Button>
             </div>
@@ -112,10 +112,10 @@ export function Hero() {
                   </a>
                 ))}
                 <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
-                  <Button variant="ghost" className="justify-start text-sm text-muted-foreground" onClick={() => setViewMode('app')}>
+                  <Button variant="ghost" className="justify-start text-sm text-muted-foreground" onClick={() => setViewMode('login')}>
                     Sign In
                   </Button>
-                  <Button className="bg-primary hover:bg-primary/90 rounded-full text-sm w-full" onClick={() => setViewMode('app')}>
+                  <Button className="bg-primary hover:bg-primary/90 rounded-full text-sm w-full" onClick={() => setViewMode('login')}>
                     Start Free Trial
                   </Button>
                 </div>
@@ -178,7 +178,7 @@ export function Hero() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 rounded-full px-8 h-12 text-base font-medium shadow-lg glow-sm"
-              onClick={() => setViewMode('app')}
+              onClick={() => setViewMode('login')}
             >
               Start Automating
               <ArrowRight className="size-4 ml-1" />

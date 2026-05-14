@@ -127,7 +127,7 @@ export function CTA() {
           <Button
             size="lg"
             className="bg-primary hover:bg-primary/90 rounded-full px-8 h-12 text-base font-medium shadow-lg glow-md"
-            onClick={() => setViewMode('app')}
+            onClick={() => setViewMode('login')}
           >
             Start Free Trial
             <ArrowRight className="size-4 ml-1" />

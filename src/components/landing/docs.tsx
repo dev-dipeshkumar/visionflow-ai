@@ -156,7 +156,7 @@ export function DocsSection() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 rounded-full px-8"
-              onClick={() => setViewMode('app')}
+              onClick={() => setViewMode('login')}
             >
               <Play className="size-4 mr-1.5" />
               Try It Free — 5 Min Setup
@@ -245,7 +245,7 @@ export function DocsSection() {
           className="mt-12 text-center"
         >
           <p className="text-sm text-muted-foreground">
-            Need the full technical reference? <button onClick={() => setViewMode('app')} className="text-primary hover:underline font-medium">Sign in</button> to access the complete documentation hub with API reference, advanced guides, and version history.
+            Need the full technical reference? <button onClick={() => setViewMode('login')} className="text-primary hover:underline font-medium">Sign in</button> to access the complete documentation hub with API reference, advanced guides, and version history.
           </p>
         </motion.div>
       </div>

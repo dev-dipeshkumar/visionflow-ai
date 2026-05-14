@@ -169,7 +169,7 @@ export function BlogSection() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 rounded-full px-8"
-              onClick={() => setViewMode('app')}
+              onClick={() => setViewMode('login')}
             >
               Start Writing — Free
               <ArrowRight className="size-4 ml-1" />

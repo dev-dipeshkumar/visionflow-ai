@@ -246,3 +246,44 @@ Stage Summary:
 - Team page accessible from sidebar as "Team & Testers"
 - Passwords NEVER stored in plaintext — bcrypt with 12 rounds
 - Build passes cleanly, all 7 database users verified
+
+---
+Task ID: 7
+Agent: Main
+Task: Replace "Back to website" with "Sign Out" + Login page for full auth flow
+
+Work Log:
+- Updated Zustand store: Added `currentUser` (CurrentUser | null), `setCurrentUser`, `signOut` action
+- Changed ViewMode from `'landing' | 'app'` to `'landing' | 'login' | 'app'`
+- `signOut()` clears currentUser, sets viewMode to 'login', resets activePage to 'dashboard'
+- Rewrote header.tsx: Dynamic user display (name, email, role badge, avatar initials from currentUser)
+- Replaced "Back to Website" with red "Sign Out" button that calls signOut()
+- Added role badges: Tester (amber), Admin (violet), or plain role text
+- Added `team` page info entry to pageInfo
+- Created `src/components/auth/login-page.tsx` — Professional sign-in page with:
+  - VisionFlow AI branding (logo, title, subtitle)
+  - Email input with Mail icon
+  - Password input with Lock icon and show/hide toggle
+  - "Sign In" button with gradient styling and loading spinner
+  - Error/success message animations
+  - "Forgot password?" link
+  - Quick demo login buttons (Admin, Tester 1, Tester 2, Tester 3) that auto-fill credentials
+  - Security notice (bcrypt hashing)
+  - "Back to home" link to return to landing
+  - Beautiful background effects (glow orbs, grid pattern, blur)
+- Updated page.tsx: Three-way view mode (landing → login → app) with AnimatePresence transitions
+- Updated hero.tsx: All CTAs now go to 'login' instead of 'app' (Sign In, Start Free Trial, Start Automating)
+- Updated cta.tsx: "Start Free Trial" button goes to 'login'
+- Updated docs.tsx: "Try It Free" and "Sign in" links go to 'login'
+- Updated blog.tsx: "Start Writing" button goes to 'login'
+- Verified: Only login-page.tsx sets viewMode to 'app' (after successful auth)
+- Build passes cleanly (0 errors)
+
+Stage Summary:
+- "Back to website" replaced with "Sign Out" (red, with LogOut icon)
+- Full auth flow: Landing → Login → App → Sign Out → Login
+- Login page connects to /api/auth/login with bcrypt verification
+- Quick demo login buttons for Admin + 3 Tester accounts
+- Header dynamically shows current user's name, email, role, avatar
+- All landing page CTAs route through login page (no direct app access)
+- Tester accounts can be tested by signing out and signing in
