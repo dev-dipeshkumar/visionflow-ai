@@ -288,7 +288,7 @@ export function Workflow() {
               }}
               initial={{ scaleY: 0 }}
               animate={isInView ? { scaleY: 1 } : { scaleY: 0 }}
-              transition={{ duration: 1.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{ duration: 1.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
             />
             {/* Animated pulse on the line */}
             <motion.div
@@ -330,7 +330,7 @@ export function Workflow() {
                   transition={{
                     delay: i * 0.08,
                     duration: 0.6,
-                    ease: [0.25, 0.46, 0.45, 0.94],
+                    ease: [0.25, 0.46, 0.45, 0.94] as const,
                   }}
                   className={`relative flex items-center ${
                     isLeft ? 'flex-row' : 'flex-row-reverse'

@@ -76,6 +76,7 @@ import {
 } from '@/components/ui/select'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast, toast } from '@/hooks/use-toast'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Lead {
@@ -744,8 +745,8 @@ function TableView({
                       </AvatarFallback>
                     </Avatar>
                   </td>
-                  <td className="px-3 py-3 font-medium">{lead.name}</td>
-                  <td className="px-3 py-3 text-muted-foreground">{lead.company}</td>
+                  <td className="px-3 py-3 font-medium truncate max-w-[150px]">{lead.name}</td>
+                  <td className="px-3 py-3 text-muted-foreground truncate max-w-[120px]">{lead.company}</td>
                   <td className="px-3 py-3">
                     <Badge variant="outline" className="capitalize text-xs">
                       {lead.status}
@@ -756,19 +757,19 @@ function TableView({
                       {lead.score}
                     </Badge>
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">{lead.source}</td>
+                  <td className="px-3 py-3 text-muted-foreground truncate">{lead.source}</td>
                   <td className="px-3 py-3 font-semibold text-emerald-600">{lead.value}</td>
-                  <td className="px-3 py-3 text-muted-foreground">{lead.industry}</td>
+                  <td className="px-3 py-3 text-muted-foreground truncate">{lead.industry}</td>
                   <td className="px-3 py-3 text-muted-foreground text-xs">{lead.createdAt}</td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Email">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title="Email">
                         <Mail className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title="Call">
                         <Phone className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Enrich AI">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title="Enrich AI">
                         <Sparkles className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -855,7 +856,7 @@ function LeadDetailDialog({
   const stageName = stageObj?.name ?? lead.status
 
   function handleAddNote() {
-    if (!newNote.trim()) return
+    if (!newNote.trim() || !lead) return
     onAddNote(lead.id, newNote.trim())
     setNewNote('')
   }
@@ -1676,7 +1677,7 @@ export function CRMPage() {
 
   // Core state
   const [leads, setLeads] = useState<Lead[]>(leadsData)
-  const [search, setSearch] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -1836,9 +1837,9 @@ export function CRMPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search leads..."
-                value={search}
+                value={searchInput}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 w-[200px] md:w-[260px] h-9"
+                className="pl-8 w-full sm:w-[200px] md:w-[260px] h-9"
               />
             </div>
 

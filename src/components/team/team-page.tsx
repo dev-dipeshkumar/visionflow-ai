@@ -127,6 +127,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 // ─── Role & Status Config ─────────────────────────────────────────────────
 
@@ -591,7 +592,7 @@ function TeamTab({ members, onEdit, onDelete, onView }: {
   onDelete: (m: TeamMember) => void
   onView: (m: TeamMember) => void
 }) {
-  const [search, setSearch] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [sortField, setSortField] = useState<'name' | 'role' | 'department' | 'lastLogin'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -624,7 +625,7 @@ function TeamTab({ members, onEdit, onDelete, onView }: {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search team members..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
+          <Input placeholder="Search team members..." value={searchInput} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
         </div>
         <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(0) }}>
           <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="All Roles" /></SelectTrigger>
@@ -693,7 +694,7 @@ function TeamTab({ members, onEdit, onDelete, onView }: {
                     {/* Actions */}
                     <div className="hidden lg:flex items-center" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onView(member)}><Eye className="h-4 w-4 mr-2" />View Details</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onEdit(member)}><Pencil className="h-4 w-4 mr-2" />Edit Member</DropdownMenuItem>
@@ -924,7 +925,7 @@ function TestersTab({ members }: { members: TeamMember[] }) {
 // ─── Activity Log Tab ──────────────────────────────────────────────────────
 
 function ActivityTab({ logs }: { logs: ActivityLog[] }) {
-  const [search, setSearch] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [page, setPage] = useState(0)
   const perPage = 10
@@ -951,7 +952,7 @@ function ActivityTab({ logs }: { logs: ActivityLog[] }) {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search logs by user, action, or target..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
+          <Input placeholder="Search logs by user, action, or target..." value={searchInput} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
         </div>
         <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(0) }}>
           <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="All Categories" /></SelectTrigger>

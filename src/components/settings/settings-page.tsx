@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import {
   billingPlans,
@@ -186,10 +186,10 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile')
 
   // Simulated loading
-  useState(() => {
+  useEffect(() => {
     const t = setTimeout(() => setLoading(false), 800)
     return () => clearTimeout(t)
-  })
+  }, [])
 
   const userName = currentUser?.name ?? seedProfile.name
 

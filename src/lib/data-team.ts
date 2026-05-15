@@ -28,7 +28,7 @@ export interface ActivityLog {
   userName: string
   userAvatar: string
   action: string
-  category: 'auth' | 'crm' | 'agents' | 'outreach' | 'projects' | 'settings' | 'bugs' | 'docs'
+  category: 'auth' | 'crm' | 'agents' | 'outreach' | 'projects' | 'settings' | 'bugs' | 'docs' | 'analytics'
   target: string
   timestamp: string
   ip: string

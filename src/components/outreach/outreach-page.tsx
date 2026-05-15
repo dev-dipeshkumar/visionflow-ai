@@ -670,27 +670,11 @@ function CampaignFormDialog({
   onSave: (data: Partial<Campaign>) => void
 }) {
   const isEdit = !!campaign
-  const [name, setName] = useState('')
-  const [type, setType] = useState<CampaignType>('email')
-  const [subject, setSubject] = useState('')
-  const [targetList, setTargetList] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
-
-  useEffect(() => {
-    if (campaign) {
-      setName(campaign.name)
-      setType(campaign.type)
-      setSubject(campaign.subject ?? '')
-      setTargetList(campaign.targetList ?? '')
-      setScheduledAt(campaign.scheduledAt ?? '')
-    } else {
-      setName('')
-      setType('email')
-      setSubject('')
-      setTargetList('')
-      setScheduledAt('')
-    }
-  }, [campaign, open])
+  const [name, setName] = useState(campaign?.name ?? '')
+  const [type, setType] = useState<CampaignType>(campaign?.type ?? 'email')
+  const [subject, setSubject] = useState(campaign?.subject ?? '')
+  const [targetList, setTargetList] = useState(campaign?.targetList ?? '')
+  const [scheduledAt, setScheduledAt] = useState(campaign?.scheduledAt ?? '')
 
   function handleSave() {
     if (!name.trim()) return
@@ -1000,23 +984,11 @@ function TemplateFormDialog({
   onSave: (data: Partial<Template>) => void
 }) {
   const isEdit = !!template
-  const [name, setName] = useState('')
-  const [type, setType] = useState<CampaignType>('email')
-  const [subject, setSubject] = useState('')
-  const [preview, setPreview] = useState('')
-  const [category, setCategory] = useState('Cold Outreach')
-
-  useEffect(() => {
-    if (template) {
-      setName(template.name)
-      setType(template.type)
-      setSubject(template.subject ?? '')
-      setPreview(template.preview)
-      setCategory(template.category ?? 'Cold Outreach')
-    } else {
-      setName(''); setType('email'); setSubject(''); setPreview(''); setCategory('Cold Outreach')
-    }
-  }, [template, open])
+  const [name, setName] = useState(template?.name ?? '')
+  const [type, setType] = useState<CampaignType>(template?.type ?? 'email')
+  const [subject, setSubject] = useState(template?.subject ?? '')
+  const [preview, setPreview] = useState(template?.preview ?? '')
+  const [category, setCategory] = useState(template?.category ?? 'Cold Outreach')
 
   function handleSave() {
     if (!name.trim() || !preview.trim()) return
@@ -1244,20 +1216,10 @@ function SequenceFormDialog({
   onSave: (data: Partial<Sequence>) => void
 }) {
   const isEdit = !!sequence
-  const [name, setName] = useState('')
-  const [steps, setSteps] = useState<SequenceStep[]>([
-    { id: nextId(), day: 1, label: 'Intro Email', channel: 'email' },
-  ])
-
-  useEffect(() => {
-    if (sequence) {
-      setName(sequence.name)
-      setSteps([...sequence.steps])
-    } else {
-      setName('')
-      setSteps([{ id: nextId(), day: 1, label: 'Intro Email', channel: 'email' }])
-    }
-  }, [sequence, open])
+  const [name, setName] = useState(sequence?.name ?? '')
+  const [steps, setSteps] = useState<SequenceStep[]>(
+    sequence ? [...sequence.steps] : [{ id: nextId(), day: 1, label: 'Intro Email', channel: 'email' }]
+  )
 
   function addStep() {
     const lastDay = steps.length > 0 ? steps[steps.length - 1].day : 0
@@ -1969,10 +1931,10 @@ export function OutreachPage() {
       </Tabs>
 
       {/* Dialogs */}
-      <CampaignFormDialog open={campaignFormOpen} onOpenChange={setCampaignFormOpen} campaign={editingCampaign} onSave={handleSaveCampaign} />
+      <CampaignFormDialog key={editingCampaign?.id ?? 'new'} open={campaignFormOpen} onOpenChange={setCampaignFormOpen} campaign={editingCampaign} onSave={handleSaveCampaign} />
       <CampaignAnalyticsDialog campaign={analyticsCampaign} open={analyticsOpen} onOpenChange={setAnalyticsOpen} />
-      <TemplateFormDialog open={templateFormOpen} onOpenChange={setTemplateFormOpen} template={editingTemplate} onSave={handleSaveTemplate} />
-      <SequenceFormDialog open={sequenceFormOpen} onOpenChange={setSequenceFormOpen} sequence={editingSequence} onSave={handleSaveSequence} />
+      <TemplateFormDialog key={editingTemplate?.id ?? 'new'} open={templateFormOpen} onOpenChange={setTemplateFormOpen} template={editingTemplate} onSave={handleSaveTemplate} />
+      <SequenceFormDialog key={editingSequence?.id ?? 'new'} open={sequenceFormOpen} onOpenChange={setSequenceFormOpen} sequence={editingSequence} onSave={handleSaveSequence} />
       <DeleteConfirmDialog open={deleteConfirm.open} onOpenChange={(o) => setDeleteConfirm({ ...deleteConfirm, open: o })} title={`Delete ${deleteConfirm.type === 'campaign' ? 'Campaign' : deleteConfirm.type === 'template' ? 'Template' : 'Sequence'}`} description={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`} onConfirm={confirmDelete} />
     </div>
   )

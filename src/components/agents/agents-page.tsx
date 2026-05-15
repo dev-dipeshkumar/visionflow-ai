@@ -92,6 +92,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -665,13 +666,13 @@ function AgentTableRow({
       <td className="px-3 py-3 text-xs text-muted-foreground">{agent.lastRun}</td>
       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" title="Run">
+          <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title="Run">
             <Play className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" title={agent.status === 'active' ? 'Pause' : 'Resume'}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title={agent.status === 'active' ? 'Pause' : 'Resume'}>
             {agent.status === 'active' ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" title="Configure" onClick={() => onConfigure(agent)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7" title="Configure" onClick={() => onConfigure(agent)}>
             <Settings className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -695,20 +696,11 @@ function AgentDetailDialog({
   executionLogs: ExecutionLog[]
   onToast: (title: string, description: string) => void
 }) {
-  const [temperature, setTemperature] = useState(0.7)
-  const [maxTokens, setMaxTokens] = useState(4096)
-  const [autoRun, setAutoRun] = useState(false)
+  const [temperature, setTemperature] = useState(agent ? 0.7 : 0.7)
+  const [maxTokens, setMaxTokens] = useState(agent ? 4096 : 4096)
+  const [autoRun, setAutoRun] = useState(agent ? agent.schedule !== 'Manual' : false)
   const [logFilter, setLogFilter] = useState<'all' | 'success' | 'warning' | 'error'>('all')
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'failed'>('all')
-
-  // Reset config when agent changes
-  useEffect(() => {
-    if (agent) {
-      setTemperature(0.7)
-      setMaxTokens(4096)
-      setAutoRun(agent.schedule !== 'Manual')
-    }
-  }, [agent])
 
   if (!agent) return null
 
@@ -1708,7 +1700,7 @@ export function AgentsPage() {
   const [executionLogs] = useState<ExecutionLog[]>(generateExecutionLogs)
 
   // UI state
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'error'>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -1735,12 +1727,12 @@ export function AgentsPage() {
   // Filter agents
   const filteredAgents = useMemo(() => {
     return allAgents.filter((agent) => {
-      const matchesSearch = searchQuery === '' || agent.name.toLowerCase().includes(searchQuery.toLowerCase()) || agent.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = search === '' || agent.name.toLowerCase().includes(search.toLowerCase()) || agent.description.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'all' || agent.status === statusFilter
       const matchesType = typeFilter === 'all' || agent.type === typeFilter
       return matchesSearch && matchesStatus && matchesType
     })
-  }, [allAgents, searchQuery, statusFilter, typeFilter])
+  }, [allAgents, search, statusFilter, typeFilter])
 
   // Sort for table view
   const sortedAgents = useMemo(() => {
@@ -1876,7 +1868,7 @@ export function AgentsPage() {
 
   const handleToast = useCallback((title: string, description: string) => {
     toast({ title, description })
-  }, [])
+  }, [toast])
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -1927,8 +1919,8 @@ export function AgentsPage() {
           <Input
             type="text"
             placeholder="Search agents by name or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 text-sm"
           />
         </div>
@@ -2001,7 +1993,7 @@ export function AgentsPage() {
       {viewMode === 'grid' && (
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${statusFilter}-${typeFilter}-${searchQuery}`}
+            key={`${statusFilter}-${typeFilter}-${search}`}
             className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
             variants={containerVariants}
             initial="hidden"
@@ -2112,11 +2104,11 @@ export function AgentsPage() {
           </div>
           <p className="text-lg font-medium text-foreground">No agents found</p>
           <p className="mt-1 text-sm text-muted-foreground max-w-md">
-            {searchQuery ? `No agents match "${searchQuery}". Try adjusting your search or filters.` : 'Get started by creating your first AI agent from a template.'}
+            {search ? `No agents match "${search}". Try adjusting your search or filters.` : 'Get started by creating your first AI agent from a template.'}
           </p>
           <div className="flex items-center gap-2 mt-4">
-            {searchQuery && (
-              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+            {search && (
+              <Button variant="outline" size="sm" onClick={() => setSearch('')}>
                 Clear Search
               </Button>
             )}
@@ -2152,6 +2144,7 @@ export function AgentsPage() {
 
       {/* ── Agent Detail Dialog ─────────────────────────────────────────────── */}
       <AgentDetailDialog
+        key={selectedAgent?.id ?? 'new'}
         agent={selectedAgent}
         open={dialogOpen}
         onOpenChange={setDialogOpen}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useAppStore, type PageId } from '@/lib/store'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -85,10 +86,12 @@ export function Sidebar() {
   })
 
   // If the active page is no longer visible (role changed), redirect to dashboard
-  const visiblePageIds = new Set(navItems.map((i) => i.pageId))
-  if (!visiblePageIds.has(activePage)) {
-    setActivePage('dashboard')
-  }
+  const visiblePageIds = navItems.map((i) => i.pageId).join(',')
+  useEffect(() => {
+    if (!navItems.some((i) => i.pageId === activePage)) {
+      setActivePage('dashboard')
+    }
+  }, [activePage, visiblePageIds])
 
   const sidebarContent = (
     <motion.aside

@@ -368,7 +368,7 @@ export function AnalyticsPage() {
   // KPI Card component
   // ---------------------------------------------------------------------------
 
-  const renderKPICard = (kpi: typeof overviewKPIs[0]) => {
+  const renderKPICard = (kpi: typeof overviewKPIs[number] | typeof aiKPIs[number]) => {
     const Icon = kpi.icon
     const isUp = kpi.trend === 'up'
     return (

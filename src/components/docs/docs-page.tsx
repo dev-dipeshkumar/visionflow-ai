@@ -87,6 +87,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 // ---------------------------------------------------------------------------
 // Icon mapping
@@ -1363,7 +1364,7 @@ function InstantSearch({
 // ---------------------------------------------------------------------------
 
 export function DocsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<string[]>(['d1', 'd4', 'd11'])
   const [activeTab, setActiveTab] = useState('browse')
@@ -1385,15 +1386,15 @@ export function DocsPage() {
   const filteredArticles = useMemo(() => {
     return docsArticles.filter((article) => {
       const matchesSearch =
-        searchQuery === '' ||
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
+        search === '' ||
+        article.title.toLowerCase().includes(search.toLowerCase()) ||
+        article.description.toLowerCase().includes(search.toLowerCase()) ||
+        article.tags?.some((t) => t.toLowerCase().includes(search.toLowerCase()))
       const matchesCategory =
         categoryFilter === 'all' || article.categoryId === categoryFilter
       return matchesSearch && matchesCategory
     })
-  }, [searchQuery, categoryFilter])
+  }, [search, categoryFilter])
 
   // Bookmarked articles
   const bookmarkedArticles = useMemo(() => {
@@ -1482,8 +1483,8 @@ export function DocsPage() {
             </TooltipProvider>
 
             <InstantSearch
-              query={searchQuery}
-              onQueryChange={setSearchQuery}
+              query={searchInput}
+              onQueryChange={setSearch}
               onSelectArticle={openArticle}
             />
 
@@ -1538,7 +1539,7 @@ export function DocsPage() {
                       onSelectArticle={openArticle}
                       expandedCategories={expandedCategories}
                       onToggleCategory={toggleCategory}
-                      searchQuery={searchQuery}
+                      searchQuery={search}
                     />
                   </ScrollArea>
                 </CardContent>

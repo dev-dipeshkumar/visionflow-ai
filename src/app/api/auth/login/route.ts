@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeEmail, isValidEmail } from '@/lib/sanitize'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit login attempts (5 per minute per IP)
+    const clientIp = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
+    const rateResult = rateLimit(`login:${clientIp}`, { maxRequests: 5, windowMs: 60 * 1000 })
+    if (!rateResult.success) {
+      return NextResponse.json(
+        { error: `Too many login attempts. Try again in ${Math.ceil(rateResult.resetIn / 1000)} seconds.` },
+        { status: 429 }
+      )
+    }
+
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -13,8 +25,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const sanitizedEmail = sanitizeEmail(email)
+
+    if (!isValidEmail(sanitizedEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: sanitizedEmail },
       include: { tenant: true },
     })
 

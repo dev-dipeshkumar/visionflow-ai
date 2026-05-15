@@ -584,8 +584,6 @@ function ProjectDetailDialog({
 }) {
   const [activeDetailTab, setActiveDetailTab] = useState('overview')
 
-  useEffect(() => { setActiveDetailTab('overview') }, [open])
-
   if (!project) return null
   const typeConf = TYPE_CONFIG[project.type]
   const statusConf = STATUS_CONFIG[project.status]
@@ -852,31 +850,15 @@ function ProjectFormDialog({
   onSave: (data: Partial<ProjectData>) => void
 }) {
   const isEdit = !!project
-  const [name, setName] = useState('')
-  const [client, setClient] = useState('')
-  const [type, setType] = useState<ProjectType>('service')
-  const [budget, setBudget] = useState('')
-  const [deadline, setDeadline] = useState('')
-  const [description, setDescription] = useState('')
-  const [clientContact, setClientContact] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
-  const [tags, setTags] = useState('')
-
-  useEffect(() => {
-    if (project) {
-      setName(project.name)
-      setClient(project.client)
-      setType(project.type)
-      setBudget(String(project.budget))
-      setDeadline(project.deadline)
-      setDescription(project.description)
-      setClientContact(project.clientContact)
-      setClientEmail(project.clientEmail)
-      setTags(project.tags.join(', '))
-    } else {
-      setName(''); setClient(''); setType('service'); setBudget(''); setDeadline(''); setDescription(''); setClientContact(''); setClientEmail(''); setTags('')
-    }
-  }, [project, open])
+  const [name, setName] = useState(project?.name ?? '')
+  const [client, setClient] = useState(project?.client ?? '')
+  const [type, setType] = useState<ProjectType>(project?.type ?? 'service')
+  const [budget, setBudget] = useState(project ? String(project.budget) : '')
+  const [deadline, setDeadline] = useState(project?.deadline ?? '')
+  const [description, setDescription] = useState(project?.description ?? '')
+  const [clientContact, setClientContact] = useState(project?.clientContact ?? '')
+  const [clientEmail, setClientEmail] = useState(project?.clientEmail ?? '')
+  const [tags, setTags] = useState(project?.tags.join(', ') ?? '')
 
   function handleSave() {
     if (!name.trim() || !client.trim()) return
@@ -1219,12 +1201,10 @@ export function ProjectsPage() {
     })
   }, [projectList, search, filterType, filterStatus])
 
-  // Keep detailProject in sync
-  useEffect(() => {
-    if (detailProject) {
-      const updated = projectList.find((p) => p.id === detailProject.id)
-      if (updated) setDetailProject(updated)
-    }
+  // Keep detailProject in sync with projectList changes (useMemo, not useEffect)
+  const activeDetailProject = useMemo(() => {
+    if (!detailProject) return null
+    return projectList.find((p) => p.id === detailProject.id) ?? detailProject
   }, [projectList, detailProject])
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -1430,7 +1410,8 @@ export function ProjectsPage() {
 
       {/* Project Detail Dialog */}
       <ProjectDetailDialog
-        project={detailProject}
+        key={activeDetailProject?.id ?? 'closed'}
+        project={activeDetailProject}
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         onEdit={handleEditProject}
@@ -1439,6 +1420,7 @@ export function ProjectsPage() {
 
       {/* Project Form Dialog */}
       <ProjectFormDialog
+        key={editingProject?.id ?? 'new'}
         open={formDialogOpen}
         onOpenChange={setFormDialogOpen}
         project={editingProject}

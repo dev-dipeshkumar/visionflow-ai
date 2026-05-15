@@ -103,6 +103,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ function PageSkeleton() {
           <div key={i} className="h-9 w-24 bg-muted/40 rounded-md animate-pulse" />
         ))}
       </div>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="h-64 bg-muted/30 rounded-xl animate-pulse" />
         ))}
@@ -557,7 +558,7 @@ function BoardTab({ bugs, onView, onStatusChange }: { bugs: BugData[]; onView: (
 // ─── List Tab ──────────────────────────────────────────────────────────────
 
 function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; onView: (b: BugData) => void; onStatusChange: (id: string, status: BugStatus) => void; onDelete: (b: BugData) => void }) {
-  const [search, setSearch] = useState('')
+  const [searchInput, search, setSearch] = useDebouncedSearch()
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [moduleFilter, setModuleFilter] = useState<string>('all')
@@ -597,7 +598,7 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search bugs by title, ID, assignee, label..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
+          <Input placeholder="Search bugs by title, ID, assignee, label..." value={searchInput} onChange={(e) => { setSearch(e.target.value); setPage(0) }} className="pl-9 h-9" />
         </div>
         <Select value={severityFilter} onValueChange={(v) => { setSeverityFilter(v); setPage(0) }}>
           <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Severity" /></SelectTrigger>
@@ -664,7 +665,7 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
                     <div className="flex items-center gap-1.5 text-xs"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{getInitials(bug.assignee)}</AvatarFallback></Avatar>{bug.assignee}</div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onView(bug)}><Eye className="h-4 w-4 mr-2" />View Details</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onStatusChange(bug.id, 'fixed')}><CheckCircle2 className="h-4 w-4 mr-2" />Mark Fixed</DropdownMenuItem>
@@ -801,7 +802,7 @@ function AnalyticsTabView({ bugs }: { bugs: BugData[] }) {
             <CardTitle className="text-sm font-semibold flex items-center gap-2"><Flame className="h-4 w-4 text-orange-500" />Severity Distribution</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {data.bugsBySeverity.map((s) => {
                 const pct = bugs.length > 0 ? (s.count / bugs.length) * 100 : 0
                 return (

@@ -851,27 +851,11 @@ function WorkflowFormDialog({
   onSave: (data: Partial<WorkflowData>) => void
 }) {
   const isEdit = !!workflow
-  const [name, setName] = useState('')
-  const [type, setType] = useState<WorkflowType>('lead_generation')
-  const [description, setDescription] = useState('')
-  const [isAIAssisted, setIsAIAssisted] = useState(true)
-  const [tags, setTags] = useState('')
-
-  useEffect(() => {
-    if (workflow) {
-      setName(workflow.name)
-      setType(workflow.type)
-      setDescription(workflow.description)
-      setIsAIAssisted(workflow.isAIAssisted)
-      setTags(workflow.tags.join(', '))
-    } else {
-      setName('')
-      setType('lead_generation')
-      setDescription('')
-      setIsAIAssisted(true)
-      setTags('')
-    }
-  }, [workflow, open])
+  const [name, setName] = useState(workflow?.name ?? '')
+  const [type, setType] = useState<WorkflowType>(workflow?.type ?? 'lead_generation')
+  const [description, setDescription] = useState(workflow?.description ?? '')
+  const [isAIAssisted, setIsAIAssisted] = useState(workflow?.isAIAssisted ?? true)
+  const [tags, setTags] = useState(workflow?.tags.join(', ') ?? '')
 
   function handleSave() {
     if (!name.trim()) return
@@ -1165,11 +1149,6 @@ function BuilderTab({ workflow, onSave }: { workflow: WorkflowData | null; onSav
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [editingWorkflow, setEditingWorkflow] = useState<WorkflowData | null>(workflow)
 
-  useEffect(() => {
-    setEditingWorkflow(workflow)
-    setSelectedNodeId(null)
-  }, [workflow])
-
   if (!editingWorkflow) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 text-center">
@@ -1187,6 +1166,7 @@ function BuilderTab({ workflow, onSave }: { workflow: WorkflowData | null; onSav
   const statusConf = statusBadgeConfig[editingWorkflow.status]
 
   function handleAddNode(nodeType: NodeType) {
+    if (!editingWorkflow) return
     const conf = nodeTypeConfig[nodeType]
     const newNode: WorkflowNode = {
       id: `nn${nextId()}`,
@@ -1203,7 +1183,7 @@ function BuilderTab({ workflow, onSave }: { workflow: WorkflowData | null; onSav
   }
 
   function handleRemoveNode(nodeId: string) {
-    if (editingWorkflow.nodes.length <= 1) return
+    if (!editingWorkflow || editingWorkflow.nodes.length <= 1) return
     setEditingWorkflow({
       ...editingWorkflow,
       nodes: editingWorkflow.nodes.filter((n) => n.id !== nodeId),
@@ -1212,6 +1192,7 @@ function BuilderTab({ workflow, onSave }: { workflow: WorkflowData | null; onSav
   }
 
   function handleUpdateNodeLabel(nodeId: string, label: string) {
+    if (!editingWorkflow) return
     setEditingWorkflow({
       ...editingWorkflow,
       nodes: editingWorkflow.nodes.map((n) => n.id === nodeId ? { ...n, label } : n),
@@ -1657,6 +1638,11 @@ export function WorkflowsPage() {
   // Builder: which workflow is currently being edited in the builder
   const [builderWorkflow, setBuilderWorkflow] = useState<WorkflowData | null>(null)
 
+  const activeBuilderWorkflow = useMemo(() => {
+    if (!builderWorkflow) return null
+    return workflows.find((w) => w.id === builderWorkflow.id) ?? builderWorkflow
+  }, [workflows, builderWorkflow])
+
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1799,13 +1785,7 @@ export function WorkflowsPage() {
     toast({ title: 'Workflow Saved', description: `"${updatedWorkflow.name}" has been saved.`, variant: 'default' })
   }, [toast])
 
-  // Keep builderWorkflow in sync with workflows
-  useEffect(() => {
-    if (builderWorkflow) {
-      const updated = workflows.find((w) => w.id === builderWorkflow.id)
-      if (updated) setBuilderWorkflow(updated)
-    }
-  }, [workflows, builderWorkflow])
+
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -1892,7 +1872,7 @@ export function WorkflowsPage() {
 
         {/* Builder Tab */}
         <TabsContent value="builder" className="mt-6">
-          <BuilderTab workflow={builderWorkflow} onSave={handleSaveFromBuilder} />
+          <BuilderTab key={activeBuilderWorkflow?.id ?? 'none'} workflow={activeBuilderWorkflow} onSave={handleSaveFromBuilder} />
         </TabsContent>
 
         {/* Executions Tab */}
@@ -1912,6 +1892,7 @@ export function WorkflowsPage() {
 
       {/* Workflow Create/Edit Dialog */}
       <WorkflowFormDialog
+        key={editingWorkflow?.id ?? 'new'}
         open={formDialogOpen}
         onOpenChange={setFormDialogOpen}
         workflow={editingWorkflow}
