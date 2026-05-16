@@ -1,0 +1,64 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          DATABASE_URL: "file:./release-build.db"
+          NEXTAUTH_SECRET: "release-build-secret"
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "VisionFlow AI v${{ steps.version.outputs.VERSION }}"
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+          generate_release_notes: true
+          body: |
+            ## VisionFlow AI v${{ steps.version.outputs.VERSION }}
+
+            ### What's Changed
+            See the auto-generated notes below for a full list of changes.
+
+            ### Upgrade Instructions
+            ```bash
+            git pull origin main
+            npm install
+            npx prisma db push
+            npm run build
+            bash scripts/start-server.sh restart
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
