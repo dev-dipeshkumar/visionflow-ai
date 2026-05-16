@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { revenueData, conversionFunnel, campaigns } from '@/lib/data'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   AreaChart,
   Area,
@@ -118,96 +119,23 @@ interface ReportEntry {
 // Data
 // ---------------------------------------------------------------------------
 
-const aiModelMetrics: AIModelMetric[] = [
-  { name: 'Lead Scout', requests: 12847, avgLatency: 1.2, successRate: 94.2, cost: 342, tokens: 1284700 },
-  { name: 'Outreach Pro', requests: 8934, avgLatency: 2.1, successRate: 91.8, cost: 567, tokens: 893400 },
-  { name: 'CRM Brain', requests: 6213, avgLatency: 0.8, successRate: 97.1, cost: 189, tokens: 621300 },
-  { name: 'Proposal Forge', requests: 3456, avgLatency: 3.4, successRate: 88.5, cost: 423, tokens: 345600 },
-  { name: 'Follow-Up Engine', requests: 7124, avgLatency: 1.5, successRate: 92.7, cost: 298, tokens: 712400 },
-  { name: 'Meeting Pilot', requests: 2389, avgLatency: 2.8, successRate: 90.3, cost: 156, tokens: 238900 },
-]
+const aiModelMetrics: AIModelMetric[] = []
 
-const aiDailyUsage = [
-  { day: 'Mon', tokens: 42000, requests: 890, cost: 142 },
-  { day: 'Tue', tokens: 55000, requests: 1120, cost: 186 },
-  { day: 'Wed', tokens: 48000, requests: 980, cost: 161 },
-  { day: 'Thu', tokens: 61000, requests: 1240, cost: 208 },
-  { day: 'Fri', tokens: 52000, requests: 1050, cost: 175 },
-  { day: 'Sat', tokens: 18000, requests: 380, cost: 62 },
-  { day: 'Sun', tokens: 12000, requests: 250, cost: 41 },
-]
+const aiDailyUsage: { day: string; tokens: number; requests: number; cost: number }[] = []
 
-const aiSuccessTrend = [
-  { week: 'W1', successRate: 89, errorRate: 11 },
-  { week: 'W2', successRate: 91, errorRate: 9 },
-  { week: 'W3', successRate: 90, errorRate: 10 },
-  { week: 'W4', successRate: 93, errorRate: 7 },
-  { week: 'W5', successRate: 92, errorRate: 8 },
-  { week: 'W6', successRate: 94, errorRate: 6 },
-  { week: 'W7', successRate: 95, errorRate: 5 },
-  { week: 'W8', successRate: 93, errorRate: 7 },
-]
+const aiSuccessTrend: { week: string; successRate: number; errorRate: number }[] = []
 
-const trendData: TrendDataPoint[] = [
-  { period: 'Jan', revenue: 42000, leads: 342, conversions: 8, conversionRate: 2.3 },
-  { period: 'Feb', revenue: 51000, leads: 389, conversions: 11, conversionRate: 2.8 },
-  { period: 'Mar', revenue: 48000, leads: 412, conversions: 9, conversionRate: 2.2 },
-  { period: 'Apr', revenue: 62000, leads: 478, conversions: 14, conversionRate: 2.9 },
-  { period: 'May', revenue: 71000, leads: 521, conversions: 16, conversionRate: 3.1 },
-  { period: 'Jun', revenue: 58000, leads: 467, conversions: 12, conversionRate: 2.6 },
-  { period: 'Jul', revenue: 67000, leads: 498, conversions: 15, conversionRate: 3.0 },
-  { period: 'Aug', revenue: 73000, leads: 534, conversions: 18, conversionRate: 3.4 },
-  { period: 'Sep', revenue: 81000, leads: 589, conversions: 20, conversionRate: 3.4 },
-  { period: 'Oct', revenue: 76000, leads: 542, conversions: 17, conversionRate: 3.1 },
-  { period: 'Nov', revenue: 88000, leads: 623, conversions: 22, conversionRate: 3.5 },
-  { period: 'Dec', revenue: 95000, leads: 678, conversions: 25, conversionRate: 3.7 },
-]
+const trendData: TrendDataPoint[] = []
 
-const dealSourcesData = [
-  { name: 'LinkedIn', value: 35 },
-  { name: 'Apollo', value: 25 },
-  { name: 'Referral', value: 20 },
-  { name: 'Website', value: 12 },
-  { name: 'Other', value: 8 },
-]
+const dealSourcesData: { name: string; value: number }[] = []
 
-const conversionTrendData = [
-  { month: 'Jan', rate: 4.2 },
-  { month: 'Feb', rate: 4.8 },
-  { month: 'Mar', rate: 5.1 },
-  { month: 'Apr', rate: 5.5 },
-  { month: 'May', rate: 5.9 },
-  { month: 'Jun', rate: 5.4 },
-  { month: 'Jul', rate: 6.1 },
-  { month: 'Aug', rate: 6.5 },
-  { month: 'Sep', rate: 6.8 },
-  { month: 'Oct', rate: 6.3 },
-  { month: 'Nov', rate: 7.2 },
-  { month: 'Dec', rate: 7.8 },
-]
+const conversionTrendData: { month: string; rate: number }[] = []
 
-const teamPerformance = [
-  { name: 'Alex Morgan', role: 'Admin', deals: 34, revenue: 178000, activity: 94, leads: 142 },
-  { name: 'Sarah Chen', role: 'Manager', deals: 28, revenue: 145000, activity: 89, leads: 118 },
-  { name: 'Mike Johnson', role: 'Member', deals: 19, revenue: 98000, activity: 76, leads: 87 },
-  { name: 'Lisa Wang', role: 'Member', deals: 22, revenue: 112000, activity: 82, leads: 95 },
-]
+const teamPerformance: { name: string; role: string; deals: number; revenue: number; activity: number; leads: number }[] = []
 
-const pipelineVelocity = [
-  { stage: 'New → Contacted', avgDays: 2.1, target: 2 },
-  { stage: 'Contacted → Qualified', avgDays: 5.8, target: 5 },
-  { stage: 'Qualified → Proposal', avgDays: 8.4, target: 7 },
-  { stage: 'Proposal → Negotiation', avgDays: 6.2, target: 5 },
-  { stage: 'Negotiation → Won', avgDays: 4.1, target: 3 },
-]
+const pipelineVelocity: { stage: string; avgDays: number; target: number }[] = []
 
-const recentReports: ReportEntry[] = [
-  { id: 'r1', name: 'Q2 Revenue Summary', type: 'revenue', generatedAt: '2 hours ago', status: 'ready', size: '2.4 MB' },
-  { id: 'r2', name: 'AI Performance Weekly', type: 'ai', generatedAt: '5 hours ago', status: 'ready', size: '1.8 MB' },
-  { id: 'r3', name: 'Campaign ROI Analysis', type: 'campaign', generatedAt: '1 day ago', status: 'ready', size: '3.1 MB' },
-  { id: 'r4', name: 'Pipeline Health Report', type: 'pipeline', generatedAt: '2 days ago', status: 'ready', size: '1.2 MB' },
-  { id: 'r5', name: 'Team Activity Summary', type: 'team', generatedAt: '3 days ago', status: 'ready', size: '0.8 MB' },
-]
+const recentReports: ReportEntry[] = []
 
 const campaignChartData = campaigns.map((c) => ({
   name: c.name.length > 18 ? c.name.slice(0, 18) + '…' : c.name,
@@ -220,17 +148,17 @@ const campaignChartData = campaigns.map((c) => ({
 // ---------------------------------------------------------------------------
 
 const overviewKPIs = [
-  { title: 'Total Revenue', value: '$952K', change: '+22.4%', trend: 'up' as const, icon: DollarSign, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-  { title: 'Deals Closed', value: '187', change: '+15.3%', trend: 'up' as const, icon: BarChart3, color: 'bg-vf-teal/10 text-vf-teal' },
-  { title: 'Avg Deal Size', value: '$5.1K', change: '+8.2%', trend: 'up' as const, icon: TrendingUp, color: 'bg-vf-cyan/10 text-vf-cyan' },
-  { title: 'Customer LTV', value: '$28.4K', change: '+12.1%', trend: 'up' as const, icon: Users, color: 'bg-vf-amber/10 text-vf-amber' },
+  { title: 'Total Revenue', value: '$0', change: '0%', trend: 'up' as const, icon: DollarSign, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  { title: 'Deals Closed', value: '0', change: '0%', trend: 'up' as const, icon: BarChart3, color: 'bg-vf-teal/10 text-vf-teal' },
+  { title: 'Avg Deal Size', value: '$0', change: '0%', trend: 'up' as const, icon: TrendingUp, color: 'bg-vf-cyan/10 text-vf-cyan' },
+  { title: 'Customer LTV', value: '$0', change: '0%', trend: 'up' as const, icon: Users, color: 'bg-vf-amber/10 text-vf-amber' },
 ]
 
 const aiKPIs = [
-  { title: 'Total AI Requests', value: '39.9K', change: '+34.2%', trend: 'up' as const, icon: Zap, color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
-  { title: 'Avg Latency', value: '1.97s', change: '-12.5%', trend: 'up' as const, icon: Timer, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-  { title: 'Success Rate', value: '92.4%', change: '+3.1%', trend: 'up' as const, icon: CheckCircle2, color: 'bg-vf-teal/10 text-vf-teal' },
-  { title: 'Monthly AI Cost', value: '$1.98K', change: '+18.7%', trend: 'down' as const, icon: DollarSign, color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+  { title: 'Total AI Requests', value: '0', change: '0%', trend: 'up' as const, icon: Zap, color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
+  { title: 'Avg Latency', value: '0s', change: '0%', trend: 'up' as const, icon: Timer, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  { title: 'Success Rate', value: '0%', change: '0%', trend: 'up' as const, icon: CheckCircle2, color: 'bg-vf-teal/10 text-vf-teal' },
+  { title: 'Monthly AI Cost', value: '$0', change: '0%', trend: 'up' as const, icon: DollarSign, color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -348,6 +276,12 @@ export function AnalyticsPage() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
+  // Determine if there is no real data
+  const hasNoData =
+    revenueData.length === 0 &&
+    campaigns.length === 0 &&
+    conversionFunnel.every((s) => s.value === 0)
+
   const handleRefresh = () => {
     setLoading(true)
     setTimeout(() => {
@@ -425,37 +359,41 @@ export function AnalyticsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[170px]">
-              <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="12m">Last 12 months</SelectItem>
-            </SelectContent>
-          </Select>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export
+          {!hasNoData && (
+            <>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[170px]">
+                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="12m">Last 12 months</SelectItem>
+                </SelectContent>
+              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('Revenue')}>Revenue Report</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('Campaign')}>Campaign Report</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('AI Performance')}>AI Performance Report</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('Pipeline')}>Pipeline Report</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('Full Dashboard')}>Full Dashboard PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('Revenue')}>Revenue Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('Campaign')}>Campaign Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('AI Performance')}>AI Performance Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('Pipeline')}>Pipeline Report</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('Full Dashboard')}>Full Dashboard PDF</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -489,6 +427,15 @@ export function AnalyticsPage() {
           {/* OVERVIEW TAB                                                  */}
           {/* ============================================================ */}
           <TabsContent value="overview" className="space-y-4">
+            {hasNoData ? (
+              <EmptyState
+                icon={BarChart3}
+                title="Analytics will appear here"
+                description="Once your workspace starts collecting activity, performance insights will be displayed here."
+                primaryAction={{ label: 'Connect Data Source', onClick: () => {} }}
+              />
+            ) : (
+            <>
             {/* KPI Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {overviewKPIs.map(renderKPICard)}
@@ -610,8 +557,8 @@ export function AnalyticsPage() {
                       <Target className="size-4 text-primary shrink-0" />
                       <div className="text-xs">
                         <span className="font-medium text-foreground">Overall conversion: </span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-mono">6.6%</span>
-                        <span className="text-muted-foreground"> (187 / 2,847 leads)</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-mono">0%</span>
+                        <span className="text-muted-foreground"> (0 / 0 leads)</span>
                       </div>
                     </div>
                   </CardContent>
@@ -687,12 +634,23 @@ export function AnalyticsPage() {
                 </CardContent>
               </Card>
             </motion.div>
+            </>
+            )}
           </TabsContent>
 
           {/* ============================================================ */}
           {/* REVENUE TAB                                                   */}
           {/* ============================================================ */}
           <TabsContent value="revenue" className="space-y-4">
+            {hasNoData ? (
+              <EmptyState
+                icon={BarChart3}
+                title="Analytics will appear here"
+                description="Once your workspace starts collecting activity, performance insights will be displayed here."
+                primaryAction={{ label: 'Connect Data Source', onClick: () => {} }}
+              />
+            ) : (
+            <>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Revenue vs Target (larger) */}
               <motion.div variants={itemVariants}>
@@ -780,15 +738,15 @@ export function AnalyticsPage() {
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <div className="rounded-lg border bg-muted/30 p-2.5 text-center">
                         <p className="text-[10px] text-muted-foreground">Total Leads</p>
-                        <p className="text-sm font-bold">2,847</p>
+                        <p className="text-sm font-bold">0</p>
                       </div>
                       <div className="rounded-lg border bg-muted/30 p-2.5 text-center">
                         <p className="text-[10px] text-muted-foreground">Won Deals</p>
-                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">187</p>
+                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">0</p>
                       </div>
                       <div className="rounded-lg border bg-muted/30 p-2.5 text-center">
                         <p className="text-[10px] text-muted-foreground">Conversion</p>
-                        <p className="text-sm font-bold text-primary">6.6%</p>
+                        <p className="text-sm font-bold text-primary">0%</p>
                       </div>
                     </div>
                   </CardContent>
@@ -842,6 +800,8 @@ export function AnalyticsPage() {
                 </CardContent>
               </Card>
             </motion.div>
+            </>
+            )}
           </TabsContent>
 
           {/* ============================================================ */}
@@ -982,6 +942,15 @@ export function AnalyticsPage() {
           {/* TRENDS TAB                                                    */}
           {/* ============================================================ */}
           <TabsContent value="trends" className="space-y-4">
+            {hasNoData ? (
+              <EmptyState
+                icon={BarChart3}
+                title="Analytics will appear here"
+                description="Once your workspace starts collecting activity, performance insights will be displayed here."
+                primaryAction={{ label: 'Connect Data Source', onClick: () => {} }}
+              />
+            ) : (
+            <>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Revenue & Leads Trend */}
               <motion.div variants={itemVariants}>
@@ -1130,6 +1099,8 @@ export function AnalyticsPage() {
                 </Card>
               </motion.div>
             </div>
+            </>
+            )}
           </TabsContent>
 
           {/* ============================================================ */}

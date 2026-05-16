@@ -1,35 +1,47 @@
 ---
 Task ID: 1
 Agent: Super Z (main)
-Task: Roll back VisionFlow AI project to Enterprise Authentication + Subscription Access System state
+Task: VisionFlow AI — Clean Production Workspace Reset
 
 Work Log:
-- Assessed current project state: identified missing auth pages, API routes, billing pages, guard components, and incomplete Prisma schema
-- Updated Prisma schema with 13 new User fields (subscriptionStatus, trialEndsAt, emailVerified, lockedUntil, failedLoginAttempts, lastLoginAt, onboardingStatus, resetToken, resetTokenExpiry, verifyToken, verifyTokenExpiry, rememberMe), 5 new Tenant fields (subscriptionStatus, subscriptionId, trialEndsAt, billingEmail, ownerId), and 3 new models (PasswordResetToken, EmailVerificationToken, Session)
-- Updated Zustand store with expanded ViewMode (7 views: landing, login, signup, forgot-password, reset-password, verify-email, app), PageId (added billing, pricing, invoices), CurrentUser (added plan, workspace, subscriptionStatus, emailVerified, onboardingStatus), plus rolePermissions, planFeatures, planLimits maps and hasPermission/hasPlanFeature helper functions
-- Created 5 Auth API routes via subagent: /api/auth/signup (registration with tenant+user creation in transaction, bcrypt hashing, 14-day trial), /api/auth/forgot-password (secure token generation, doesn't reveal email existence), /api/auth/reset-password (token validation, password reset), /api/auth/verify-email (token-based verification), /api/auth/logout (session deletion)
-- Updated /api/auth/login with account lockout (5 attempts → 15-min lock), enhanced response with plan/workspace/subscription data, session creation
-- Created 4 Auth UI pages via subagent: SignupPage (full registration with password strength indicator, workspace name, terms), ForgotPasswordPage (email input with success state), ResetPasswordPage (URL token-based with password strength), VerifyEmailPage (auto-verify on mount)
-- Updated LoginPage with "Forgot password?" link (→ forgot-password view) and "Sign up" link (→ signup view)
-- Created 3 Billing pages via subagent: PricingPage (5 plan cards with monthly/annual toggle, feature checklists), BillingPage (plan overview, usage stats, payment method placeholder), InvoicesPage (searchable/filterable invoice table)
-- Created 2 Billing API routes: GET/POST /api/billing/subscription, GET /api/billing/invoices
-- Created 3 Guard components via subagent: PlanGuard (feature-gating with upgrade prompt), RoleGuard (permission-based access control), UpgradeModal (reusable dialog with plan comparison)
-- Updated page-content.tsx with billing/pricing/invoices page routing (done by subagent)
-- Updated page.tsx with all 7 auth views (landing, login, signup, forgot-password, reset-password, verify-email, app)
-- Updated header.tsx with billing/pricing/invoices page info entries
-- Removed non-existent NeuralSearchCommandPalette import from page.tsx
-- Fixed TypeScript error in pricing-page.tsx (removed stray 'shield' key from planIcons)
-- Rebuilt database with prisma db push, generated Prisma client
-- Verified production build: zero errors, zero TypeScript warnings
-- Restarted dev server: HTTP 200 on both port 3000 (direct) and port 81 (Caddy proxy)
+- TASK 1: Cleaned all 4 data files (data.ts, data-bugs.ts, data-team.ts, data-settings.ts)
+  - Removed all hardcoded demo data: fake leads, fake revenue, fake agents, fake campaigns, fake analytics, fake conversations, fake workflows, fake team members, fake bug reports, fake charts, fake project data
+  - Replaced with empty arrays and zero values
+  - Kept structural data (pipeline stages, integration services, doc categories, permission categories)
+  - All integrations set to 'disconnected' status
+- TASK 2: Created premium EmptyState component at src/components/ui/empty-state.tsx
+  - Shared reusable component with icon, title, description, primary/secondary CTA, animations
+  - Applied to all 12 panels: Dashboard, CRM, Agents, Outreach, Workflows, Projects, Chat, Analytics, Docs, Team, Bugs, Settings
+  - Each panel has contextual empty state messaging and CTAs
+- TASK 3: Data isolation confirmed
+  - API routes already scope by tenantId (billing/invoices, billing/subscription)
+  - Prisma schema has tenantId on all data models
+  - Client-side data files are empty (no shared global mock data)
+  - Each new user gets a fresh workspace via the signup transaction
+- TASK 4: Dashboard zero-state implemented
+  - Zero-state KPIs (all showing 0)
+  - SetupChecklist component with 5 onboarding items
+  - Conditional empty states for: Revenue Chart, Conversion Funnel, Pipeline Summary, AI Usage Metrics, Team Productivity, Activity Feed, Agent Status
+  - Onboarding CTAs: Add Lead, Create Agent, Connect Integration
+- TASK 5: Cleaned inline mock data from 5 component files
+  - outreach-page.tsx: removed demo templates, sequences, contacts, chart data
+  - workflows-page.tsx: removed demo workflows, templates, executions, agent names
+  - projects-page.tsx: removed demo projects, team pool, budget data
+  - chat-page.tsx: removed demo agents, activity, sessions, replaced specific demo responses with generic ones
+  - analytics-page.tsx: removed demo AI metrics, daily usage, trends, reports, zeroed KPIs
+- Fixed syntax errors in settings-page.tsx (ternary/map nesting)
+- Added missing FileText import to settings-page.tsx
+- Added missing empty array properties to teamAnalytics (loginActivity, actionDistribution, topContributors, roleDistribution)
+- Fixed Math.max on empty array guards in team-page.tsx
+- Fixed remaining mock numbers in analytics-page.tsx (6.6% → 0%, 2,847 → 0, 187 → 0)
+- Final build: zero errors, zero TypeScript warnings
+- Server: running on port 3000, Caddy proxy on port 81, both HTTP 200
 
 Stage Summary:
-- Complete Enterprise Authentication + Subscription Access System restored
-- 7 Auth API routes (signup, login, forgot-password, reset-password, verify-email, logout, verify)
-- 5 Auth UI pages (Login, Signup, ForgotPassword, ResetPassword, VerifyEmail)
-- 5 Subscription tiers (Free Trial, Starter, Pro, Agency, Enterprise)
-- 3 Billing pages (Pricing, Billing, Invoices) with 2 API routes
-- 3 Guard components (PlanGuard, RoleGuard, UpgradeModal)
-- Account lockout, rate limiting, bcrypt hashing, session management
-- Build: zero errors, zero warnings
-- Dev server: running on port 3000, Caddy proxy on port 81
+- Complete production workspace reset achieved
+- Zero mock/demo data remains in any app panel
+- Premium empty states with CTAs on all 12 panels
+- Dashboard shows onboarding checklist and zero-state KPIs
+- User data isolation via tenant-scoped API routes and Prisma schema
+- Build: clean (zero errors, zero warnings)
+- Server: running and accessible

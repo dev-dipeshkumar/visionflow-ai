@@ -93,6 +93,7 @@ import {
 } from '@/components/ui/select'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { EmptyState } from '@/components/ui/empty-state'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1024,13 +1025,12 @@ function AgentDetailDialog({
             </div>
 
             {filteredLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted mb-3">
-                  <Activity className="size-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-medium text-foreground">No execution logs</p>
-                <p className="text-xs text-muted-foreground mt-1">Run this agent to generate logs</p>
-              </div>
+              <EmptyState
+                icon={Activity}
+                title="No execution logs"
+                description="Run this agent to generate execution logs and monitor its performance."
+                className="py-4"
+              />
             ) : (
               <div className="space-y-2">
                 {filteredLogs.map((entry) => (
@@ -1912,82 +1912,84 @@ export function AgentsPage() {
       <StatsBar agents={allAgents} />
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search agents by name or description..."
-            value={searchInput}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
+      {allAgents.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search agents by name or description..."
+              value={searchInput}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
-          {(['all', 'active', 'paused', 'error'] as const).map((s) => (
+          {/* Status Filter */}
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
+            {(['all', 'active', 'paused', 'error'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                  statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          {/* Type Filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="h-9 w-[140px] text-sm">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              {agentTypes.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t === 'all' ? 'All Types' : t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              onClick={() => setViewMode('grid')}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === 'grid' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {s}
+              Grid
             </button>
-          ))}
-        </div>
-
-        {/* Type Filter */}
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="h-9 w-[140px] text-sm">
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            {agentTypes.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t === 'all' ? 'All Types' : t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              viewMode === 'grid' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Grid
-          </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              viewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Table
-          </button>
-        </div>
-
-        {/* Refresh + Filter Count */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="size-9" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Filter className="size-3.5" />
-            <span>{filteredAgents.length} of {allAgents.length}</span>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Table
+            </button>
           </div>
-          {lastUpdated > 0 && (
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Updated {lastUpdated} min ago</span>
-          )}
+
+          {/* Refresh + Filter Count */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="size-9" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Filter className="size-3.5" />
+              <span>{filteredAgents.length} of {allAgents.length}</span>
+            </div>
+            {lastUpdated > 0 && (
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">Updated {lastUpdated} min ago</span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Agent Grid View ─────────────────────────────────────────────────── */}
       {viewMode === 'grid' && (
@@ -2093,7 +2095,14 @@ export function AgentsPage() {
       )}
 
       {/* ── Empty State ─────────────────────────────────────────────────────── */}
-      {filteredAgents.length === 0 && (
+      {allAgents.length === 0 ? (
+        <EmptyState
+          icon={Bot}
+          title="No AI agents deployed"
+          description="Create your first AI agent to automate lead generation, outreach, or customer support."
+          primaryAction={{ label: 'Create Agent', onClick: () => setCreateDialogOpen(true) }}
+        />
+      ) : filteredAgents.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -2104,14 +2113,12 @@ export function AgentsPage() {
           </div>
           <p className="text-lg font-medium text-foreground">No agents found</p>
           <p className="mt-1 text-sm text-muted-foreground max-w-md">
-            {search ? `No agents match "${search}". Try adjusting your search or filters.` : 'Get started by creating your first AI agent from a template.'}
+            No agents match your search or filters. Try adjusting your criteria.
           </p>
           <div className="flex items-center gap-2 mt-4">
-            {search && (
-              <Button variant="outline" size="sm" onClick={() => setSearch('')}>
-                Clear Search
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+              Clear Search
+            </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="size-3.5" />
               Create Agent

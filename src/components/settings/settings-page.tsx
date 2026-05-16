@@ -69,6 +69,7 @@ import {
   RotateCcw,
   Save,
   Loader2,
+  FileText,
 } from 'lucide-react'
 import {
   Card,
@@ -856,7 +857,16 @@ function BillingTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {payments.map((pm) => {
+              {payments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <CreditCard className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">No payment methods on file</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Add a credit or debit card to manage your subscription.</p>
+                  <Button variant="outline" size="sm" className="mt-3 h-8" onClick={() => setShowPaymentDialog(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Payment Method
+                  </Button>
+                </div>
+              ) : payments.map((pm) => {
                 const config = cardTypeConfig[pm.type]
                 return (
                   <div key={pm.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
@@ -906,21 +916,28 @@ function BillingTab() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Invoice</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Plan</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {invoiceList.map((inv) => {
+            {invoiceList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">No invoices yet</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Invoices will appear here once you have billing activity.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Invoice</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Plan</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {invoiceList.map((inv) => {
                       const conf = invoiceStatusConfig[inv.status]
                       return (
                         <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
@@ -947,6 +964,7 @@ function BillingTab() {
                 </table>
               </div>
             </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -1365,7 +1383,13 @@ function SecurityTab() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {sessions.map((session) => (
+            {sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Monitor className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">No active sessions</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Your active sessions will appear here when you log in from different devices.</p>
+              </div>
+            ) : sessions.map((session) => (
               <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-background p-2 border">
@@ -1443,7 +1467,8 @@ function SecurityTab() {
               {filteredAudit.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Shield className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No audit entries found</p>
+                  <p className="text-sm font-medium text-muted-foreground">No audit entries yet</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Security events will be logged here as they occur.</p>
                 </div>
               )}
             </div>
@@ -1678,56 +1703,67 @@ function ApiTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {keys.map((apiKey) => (
-                <div key={apiKey.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-lg p-2 ${apiKey.status === 'active' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
-                      <Key className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{apiKey.name}</p>
-                        <Badge variant="outline" className={`text-[10px] ${apiKey.status === 'active' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-200' : 'bg-muted text-muted-foreground'}`}>
-                          {apiKey.status}
-                        </Badge>
+              {keys.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Key className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">No API keys generated</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Create an API key to access VisionFlow programmatically.</p>
+                  <Button variant="outline" size="sm" className="mt-3 h-8" onClick={() => setShowCreateKeyDialog(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Generate API Key
+                  </Button>
+                </div>
+              ) : (
+                keys.map((apiKey) => (
+                  <div key={apiKey.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className={`rounded-lg p-2 ${apiKey.status === 'active' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+                        <Key className="h-4 w-4" />
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                          {visibleKeys[apiKey.id] ? apiKey.key.replace('...', 'sk_a1b2c3d4e5f6') : apiKey.key}
-                        </code>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleKeyVisibility(apiKey.id)}>
-                          {visibleKeys[apiKey.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(apiKey.key, apiKey.name)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-muted-foreground">Created {apiKey.created}</span>
-                        <span className="text-muted-foreground/40">&middot;</span>
-                        <span className="text-[10px] text-muted-foreground">Last used {apiKey.lastUsed}</span>
-                        <span className="text-muted-foreground/40">&middot;</span>
-                        <div className="flex gap-1">
-                          {apiKey.permissions.map((p) => (
-                            <Badge key={p} variant="secondary" className="text-[9px] px-1 py-0 h-4">{p}</Badge>
-                          ))}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{apiKey.name}</p>
+                          <Badge variant="outline" className={`text-[10px] ${apiKey.status === 'active' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-200' : 'bg-muted text-muted-foreground'}`}>
+                            {apiKey.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                            {visibleKeys[apiKey.id] ? apiKey.key.replace('...', 'sk_a1b2c3d4e5f6') : apiKey.key}
+                          </code>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleKeyVisibility(apiKey.id)}>
+                            {visibleKeys[apiKey.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(apiKey.key, apiKey.name)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-muted-foreground">Created {apiKey.created}</span>
+                          <span className="text-muted-foreground/40">&middot;</span>
+                          <span className="text-[10px] text-muted-foreground">Last used {apiKey.lastUsed}</span>
+                          <span className="text-muted-foreground/40">&middot;</span>
+                          <div className="flex gap-1">
+                            {apiKey.permissions.map((p) => (
+                              <Badge key={p} variant="secondary" className="text-[9px] px-1 py-0 h-4">{p}</Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
+                    {apiKey.status === 'active' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-destructive hover:text-destructive h-7"
+                        onClick={() => { setKeyToDelete(apiKey.id); setShowDeleteKeyDialog(true) }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Revoke
+                      </Button>
+                    )}
                   </div>
-                  {apiKey.status === 'active' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-destructive hover:text-destructive h-7"
-                      onClick={() => { setKeyToDelete(apiKey.id); setShowDeleteKeyDialog(true) }}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Revoke
-                    </Button>
-                  )}
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1753,51 +1789,62 @@ function ApiTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {webhookList.map((wh) => {
-                const config = webhookStatusConfig[wh.status]
-                return (
-                  <div key={wh.id} className="p-3 rounded-lg border bg-muted/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
-                        <code className="text-sm font-mono truncate max-w-[300px]">{wh.url}</code>
-                        <Badge variant="outline" className={`text-[10px] ${config.badgeClass}`}>{config.label}</Badge>
+              {webhookList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <WebhookIcon className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">No webhooks configured</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Set up webhooks to receive real-time event notifications at your endpoints.</p>
+                  <Button variant="outline" size="sm" className="mt-3 h-8" onClick={() => setShowCreateWebhookDialog(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Webhook
+                  </Button>
+                </div>
+              ) : (
+                webhookList.map((wh) => {
+                  const config = webhookStatusConfig[wh.status]
+                  return (
+                    <div key={wh.id} className="p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+                          <code className="text-sm font-mono truncate max-w-[300px]">{wh.url}</code>
+                          <Badge variant="outline" className={`text-[10px] ${config.badgeClass}`}>{config.label}</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(wh.url, 'Webhook URL')}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleWebhookStatus(wh.id)}>
+                            {wh.status === 'paused' ? 'Resume' : 'Pause'}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
+                            Delete
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(wh.url, 'Webhook URL')}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleWebhookStatus(wh.id)}>
-                          {wh.status === 'paused' ? 'Resume' : 'Pause'}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteWebhook(wh.id)}>
-                          Delete
-                        </Button>
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="flex flex-wrap gap-1">
+                          {wh.events.map((e) => (
+                            <Badge key={e} variant="secondary" className="text-[9px] px-1.5 py-0 h-4">{e}</Badge>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          Last delivery: {wh.lastDelivery}
+                        </span>
+                        {wh.successRate > 0 && (
+                          <>
+                            <span className="text-muted-foreground/40">&middot;</span>
+                            <span className={`text-[10px] ${wh.successRate >= 95 ? 'text-emerald-600' : wh.successRate >= 80 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {wh.successRate}% success
+                            </span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground/40">&middot;</span>
+                        <span className="text-[10px] text-muted-foreground">Created {wh.created}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-2">
-                      <div className="flex flex-wrap gap-1">
-                        {wh.events.map((e) => (
-                          <Badge key={e} variant="secondary" className="text-[9px] px-1.5 py-0 h-4">{e}</Badge>
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">
-                        Last delivery: {wh.lastDelivery}
-                      </span>
-                      {wh.successRate > 0 && (
-                        <>
-                          <span className="text-muted-foreground/40">&middot;</span>
-                          <span className={`text-[10px] ${wh.successRate >= 95 ? 'text-emerald-600' : wh.successRate >= 80 ? 'text-amber-600' : 'text-red-600'}`}>
-                            {wh.successRate}% success
-                          </span>
-                        </>
-                      )}
-                      <span className="text-muted-foreground/40">&middot;</span>
-                      <span className="text-[10px] text-muted-foreground">Created {wh.created}</span>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
           </CardContent>
         </Card>

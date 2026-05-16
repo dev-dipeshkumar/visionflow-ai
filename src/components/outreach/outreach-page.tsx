@@ -41,6 +41,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Rocket,
+  Megaphone,
 } from 'lucide-react'
 import {
   Card,
@@ -99,6 +100,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   ResponsiveContainer,
   BarChart,
@@ -203,68 +205,15 @@ const initialCampaigns: Campaign[] = seedCampaigns.map((c: { id: string; name: s
   aiGenerated: c.type === 'multi_channel',
 }))
 
-const initialTemplates: Template[] = [
-  { id: 't1', name: 'SaaS Decision Maker', type: 'email', useCount: 342, preview: 'Hi {{firstName}}, I noticed {{company}} is scaling its marketing stack — our platform has helped similar SaaS teams reduce CAC by 35%...', subject: 'Scale your SaaS with AI-powered automation', category: 'Cold Outreach', aiGenerated: true, createdAt: '2026-03-10' },
-  { id: 't2', name: 'Agency Growth Pitch', type: 'linkedin', useCount: 218, preview: 'Hey {{firstName}}, saw your agency is growing fast — we work with agencies like {{company}} to automate client delivery and boost margins...', category: 'Warm Outreach', aiGenerated: true, createdAt: '2026-03-15' },
-  { id: 't3', name: 'Follow-Up Sequence', type: 'multi_channel', useCount: 567, preview: 'Multi-touch sequence: Email intro → LinkedIn connect → Value-add email → SMS nudge → Final CTA email. Optimized for 18% reply rate...', category: 'Follow-Up', aiGenerated: false, createdAt: '2026-04-01' },
-  { id: 't4', name: 'Enterprise Demo Invite', type: 'email', useCount: 189, preview: 'Hi {{firstName}}, I\'d love to show you how enterprises like {{company}} use VisionFlow to 3x their pipeline velocity. Can I book 15 min?', subject: '15-min demo: 3x your pipeline velocity', category: 'Demo', aiGenerated: true, createdAt: '2026-04-08' },
-  { id: 't5', name: 'Re-engagement Blast', type: 'email', useCount: 423, preview: 'We noticed you haven\'t explored VisionFlow AI yet — here\'s what 1,200+ companies are doing differently with AI outreach...', subject: 'What 1,200+ companies do differently', category: 'Re-engagement', aiGenerated: false, createdAt: '2026-04-12' },
-  { id: 't6', name: 'Social Proof Connector', type: 'linkedin', useCount: 156, preview: 'Hi {{firstName}}, just saw {{company}}\'s recent growth announcement — congrats! Companies at your stage typically face scaling challenges...', category: 'Warm Outreach', aiGenerated: true, createdAt: '2026-04-20' },
-]
+const initialTemplates: Template[] = []
 
-const initialSequences: Sequence[] = [
-  { id: 's1', name: 'Cold to Meeting', steps: [
-    { id: 'ss1', day: 1, label: 'Intro Email', channel: 'email', subject: 'Quick question about {{company}} growth', body: 'Hi {{firstName}}, ...' },
-    { id: 'ss2', day: 3, label: 'LinkedIn Connect', channel: 'linkedin', body: 'Hi {{firstName}}, would love to connect...' },
-    { id: 'ss3', day: 5, label: 'Value-add Email', channel: 'email', subject: 'Resource for {{company}}', body: 'Hi {{firstName}}, thought you might find this useful...' },
-    { id: 'ss4', day: 8, label: 'LinkedIn Message', channel: 'linkedin', body: 'Thanks for connecting! ...' },
-    { id: 'ss5', day: 12, label: 'Final CTA Email', channel: 'email', subject: 'Last thought for {{company}}', body: 'Hi {{firstName}}, just wanted to follow up...' },
-  ], status: 'active', contactsCount: 156, createdAt: '2026-03-01' },
-  { id: 's2', name: 'Warm Lead Nurture', steps: [
-    { id: 'ss6', day: 1, label: 'Welcome Email', channel: 'email', subject: 'Welcome to VisionFlow', body: 'Hi {{firstName}}, thanks for your interest...' },
-    { id: 'ss7', day: 2, label: 'SMS Nudge', channel: 'sms', body: 'Hey {{firstName}}, check your email for a special resource!' },
-    { id: 'ss8', day: 4, label: 'Value-add Email', channel: 'email', subject: 'Free resource for {{company}}', body: 'Hi {{firstName}}, ...' },
-    { id: 'ss9', day: 7, label: 'LinkedIn Engage', channel: 'linkedin', body: 'Great post on scaling, {{firstName}}...' },
-    { id: 'ss10', day: 10, label: 'CTA Email', channel: 'email', subject: 'Ready to scale {{company}}?', body: 'Hi {{firstName}}, ready to take the next step?' },
-  ], status: 'active', contactsCount: 89, createdAt: '2026-03-15' },
-  { id: 's3', name: 'Re-engagement Blast', steps: [
-    { id: 'ss11', day: 1, label: 'Re-engage Email', channel: 'email', subject: 'We miss you, {{firstName}}', body: 'It\'s been a while...' },
-    { id: 'ss12', day: 3, label: 'LinkedIn Reconnect', channel: 'linkedin', body: 'Hey {{firstName}}, long time no chat...' },
-    { id: 'ss13', day: 5, label: 'Offer SMS', channel: 'sms', body: 'Special offer inside, {{firstName}}!' },
-    { id: 'ss14', day: 7, label: 'Last Chance Email', channel: 'email', subject: 'Final chance: special offer for {{company}}', body: 'Last call, {{firstName}}...' },
-  ], status: 'paused', contactsCount: 234, createdAt: '2026-04-01' },
-]
+const initialSequences: Sequence[] = []
 
-const contactTargets: ContactTarget[] = [
-  { id: 'ct1', name: 'Sarah Mitchell', email: 'sarah@techcorp.io', company: 'TechCorp', title: 'VP Marketing', industry: 'SaaS', score: 87, avatar: 'SM', lastContact: '2 days ago', tags: ['hot-lead', 'saas'], status: 'replied' },
-  { id: 'ct2', name: 'James Rodriguez', email: 'james@innovate.co', company: 'Innovate Co', title: 'CEO', industry: 'Fintech', score: 92, avatar: 'JR', lastContact: '1 day ago', tags: ['high-value', 'c-level'], status: 'converted' },
-  { id: 'ct3', name: 'Emily Chen', email: 'emily@dataflow.ai', company: 'DataFlow AI', title: 'CTO', industry: 'AI/ML', score: 65, avatar: 'EC', lastContact: 'Never', tags: ['ai-ml'], status: 'targeted' },
-  { id: 'ct4', name: 'Michael Park', email: 'michael@growthlab.com', company: 'GrowthLab', title: 'Head of Ops', industry: 'Marketing', score: 74, avatar: 'MP', lastContact: '5 days ago', tags: ['marketing'], status: 'contacted' },
-  { id: 'ct5', name: 'Lisa Thompson', email: 'lisa@designhub.io', company: 'DesignHub', title: 'Creative Director', industry: 'Design', score: 89, avatar: 'LT', lastContact: '3 hours ago', tags: ['hot-lead', 'design'], status: 'replied' },
-  { id: 'ct6', name: 'David Kim', email: 'david@scaleforce.io', company: 'ScaleForce', title: 'Founder', industry: 'SaaS', score: 95, avatar: 'DK', lastContact: '1 hour ago', tags: ['enterprise', 'saas'], status: 'converted' },
-  { id: 'ct7', name: 'Rachel Green', email: 'rachel@cloudops.co', company: 'CloudOps', title: 'VP Engineering', industry: 'Cloud', score: 58, avatar: 'RG', lastContact: 'Never', tags: ['cloud'], status: 'targeted' },
-  { id: 'ct8', name: 'Nina Patel', email: 'nina@healthfirst.io', company: 'HealthFirst', title: 'Director', industry: 'Healthcare', score: 82, avatar: 'NP', lastContact: '4 days ago', tags: ['healthcare'], status: 'contacted' },
-  { id: 'ct9', name: 'Kevin Zhang', email: 'kevin@quantumdata.ai', company: 'QuantumData', title: 'CTO', industry: 'AI/ML', score: 86, avatar: 'KZ', lastContact: '2 days ago', tags: ['ai-ml', 'c-level'], status: 'replied' },
-  { id: 'ct10', name: 'Aisha Mohammed', email: 'aisha@edulearn.com', company: 'EduLearn', title: 'CEO', industry: 'EdTech', score: 80, avatar: 'AM', lastContact: '1 day ago', tags: ['edtech', 'c-level'], status: 'contacted' },
-  { id: 'ct11', name: 'Marcus Johnson', email: 'marcus@finvault.com', company: 'FinVault', title: 'CFO', industry: 'Fintech', score: 84, avatar: 'MJ', lastContact: '6 hours ago', tags: ['fintech', 'high-value'], status: 'replied' },
-  { id: 'ct12', name: 'Sophie Laurent', email: 'sophie@luxbrand.co', company: 'LuxBrand', title: 'Brand Director', industry: 'Retail', score: 69, avatar: 'SL', lastContact: '3 days ago', tags: ['retail'], status: 'targeted' },
-]
+const contactTargets: ContactTarget[] = []
 
-const campaignPerformanceData = [
-  { day: 'Mon', sent: 342, opened: 134, replied: 23 },
-  { day: 'Tue', sent: 456, opened: 189, replied: 34 },
-  { day: 'Wed', sent: 523, opened: 201, replied: 41 },
-  { day: 'Thu', sent: 489, opened: 178, replied: 38 },
-  { day: 'Fri', sent: 367, opened: 145, replied: 29 },
-  { day: 'Sat', sent: 123, opened: 48, replied: 8 },
-  { day: 'Sun', sent: 89, opened: 34, replied: 5 },
-]
+const campaignPerformanceData: { day: string; sent: number; opened: number; replied: number }[] = []
 
-const channelPerformanceData = [
-  { channel: 'Email', sent: 4155, opened: 1808, replied: 301 },
-  { channel: 'LinkedIn', sent: 834, opened: 412, replied: 67 },
-  { channel: 'Multi-Channel', sent: 2156, opened: 892, replied: 156 },
-]
+const channelPerformanceData: { channel: string; sent: number; opened: number; replied: number }[] = []
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1854,6 +1803,8 @@ export function OutreachPage() {
 
   if (isLoading) return <OutreachSkeleton />
 
+  const isEmpty = campaigns.length === 0
+
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6 min-h-screen">
       {/* Header */}
@@ -1876,6 +1827,15 @@ export function OutreachPage() {
         </div>
       </div>
 
+      {isEmpty ? (
+        <EmptyState
+          icon={Megaphone}
+          title="No campaigns yet"
+          description="Launch your first outreach campaign to connect with prospects across email, LinkedIn, and more."
+          primaryAction={{ label: 'Create Campaign', onClick: () => {} }}
+        />
+      ) : (
+      <>
       {/* Stats Bar */}
       <motion.div variants={containerVariants} initial="hidden" animate="visible">
         <StatsBar data={campaigns} />
@@ -1929,6 +1889,8 @@ export function OutreachPage() {
           <AnalyticsTab campaigns={campaigns} />
         </TabsContent>
       </Tabs>
+      </>
+      )}
 
       {/* Dialogs */}
       <CampaignFormDialog key={editingCampaign?.id ?? 'new'} open={campaignFormOpen} onOpenChange={setCampaignFormOpen} campaign={editingCampaign} onSave={handleSaveCampaign} />

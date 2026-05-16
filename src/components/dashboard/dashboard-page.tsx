@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents, pipelineStages, projects, aiUsageMetrics, teamProductivity } from '@/lib/data'
-import { useAppStore } from '@/lib/store'
+import { dashboardKPIs, activities, revenueData, conversionFunnel, aiAgents, pipelineStages, projects, aiUsageMetrics, teamProductivity, leadsData, integrations, workflowTemplates, campaigns } from '@/lib/data'
+import { useAppStore, type PageId } from '@/lib/store'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Users,
   DollarSign,
@@ -36,22 +37,24 @@ import {
   Activity,
   Zap,
   Calendar,
-  Target,
-  Rocket,
+
   MessageSquare,
   Plus,
   ArrowRight,
   Filter,
   Sun,
-  Moon,
+
   Coffee,
   Sunset,
   RefreshCw,
   Download,
   Cpu,
-  Flame,
+
   Star,
   Inbox,
+  CheckCircle2,
+  Link2,
+  Megaphone,
 } from 'lucide-react'
 import {
   Card,
@@ -65,8 +68,8 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { motion } from 'framer-motion'
 import {
   AreaChart,
@@ -264,6 +267,8 @@ function DashboardSkeleton() {
     <div className="p-4 md:p-6 space-y-6">
       {/* Welcome Banner Skeleton */}
       <Skeleton className="h-28 w-full rounded-xl" />
+      {/* Setup Checklist Skeleton */}
+      <Skeleton className="h-48 w-full rounded-xl" />
       {/* Quick Actions Skeleton */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -314,26 +319,6 @@ function DashboardSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// Empty State Component
-// ---------------------------------------------------------------------------
-
-function EmptyState({ icon: Icon, message, ctaLabel, onCta }: { icon: React.ComponentType<{ className?: string }>; message: string; ctaLabel?: string; onCta?: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="flex size-14 items-center justify-center rounded-full bg-muted mb-4">
-        <Icon className="size-6 text-muted-foreground" />
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">{message}</p>
-      {ctaLabel && onCta && (
-        <Button variant="outline" size="sm" onClick={onCta}>
-          {ctaLabel}
-        </Button>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Welcome Banner
 // ---------------------------------------------------------------------------
 
@@ -348,7 +333,9 @@ function WelcomeBanner() {
   const { setActivePage, currentUser } = useAppStore()
   const { text: greeting, icon: GreetingIcon } = getGreeting()
   const activeAgents = aiAgents.filter((a) => a.status === 'active').length
+  const totalPipelineLeads = pipelineStages.reduce((sum, s) => sum + s.count, 0)
   const displayName = currentUser?.name?.split(' ')[0] || 'User'
+  const isOnboarding = activeAgents === 0 && totalPipelineLeads === 0
 
   return (
     <motion.div variants={itemVariants}>
@@ -364,39 +351,165 @@ function WelcomeBanner() {
                   {greeting}, {displayName}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  You have <span className="font-medium text-foreground">{activeAgents} AI agents</span> running and{' '}
-                  <span className="font-medium text-foreground">{pipelineStages.reduce((sum, s) => sum + s.count, 0)} active leads</span> in your pipeline.
+                  {isOnboarding ? (
+                    'Welcome to your workspace! Start by setting up your first AI agent or adding leads to your pipeline.'
+                  ) : (
+                    <>
+                      You have <span className="font-medium text-foreground">{activeAgents} AI agents</span> running and{' '}
+                      <span className="font-medium text-foreground">{totalPipelineLeads} active leads</span> in your pipeline.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                size="sm"
-                className="gap-1.5 bg-vf-emerald hover:bg-vf-emerald/90 text-white"
-                onClick={() => setActivePage('crm')}
-              >
-                <Search className="size-3.5" />
-                Find Leads
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setActivePage('outreach')}
-              >
-                <Send className="size-3.5" />
-                New Campaign
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setActivePage('chat')}
-              >
-                <MessageSquare className="size-3.5" />
-                AI Chat
-              </Button>
+              {isOnboarding ? (
+                <>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-vf-emerald hover:bg-vf-emerald/90 text-white"
+                    onClick={() => setActivePage('crm')}
+                  >
+                    <UserPlus className="size-3.5" />
+                    Add Lead
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setActivePage('agents')}
+                  >
+                    <Bot className="size-3.5" />
+                    Create Agent
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setActivePage('settings')}
+                  >
+                    <Link2 className="size-3.5" />
+                    Connect Integration
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-vf-emerald hover:bg-vf-emerald/90 text-white"
+                    onClick={() => setActivePage('crm')}
+                  >
+                    <Search className="size-3.5" />
+                    Find Leads
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setActivePage('outreach')}
+                  >
+                    <Send className="size-3.5" />
+                    New Campaign
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setActivePage('chat')}
+                  >
+                    <MessageSquare className="size-3.5" />
+                    AI Chat
+                  </Button>
+                </>
+              )}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Setup Checklist
+// ---------------------------------------------------------------------------
+
+interface ChecklistItem {
+  id: string
+  label: string
+  completed: boolean
+  pageId: PageId
+  icon: React.ComponentType<{ className?: string }>
+}
+
+function SetupChecklist() {
+  const { setActivePage } = useAppStore()
+
+  const hasConnectedIntegration = integrations.some((i) => i.status === 'connected')
+
+  const items: ChecklistItem[] = [
+    { id: 'lead', label: 'Add your first lead', completed: leadsData.length > 0, pageId: 'crm', icon: UserPlus },
+    { id: 'integration', label: 'Connect an integration', completed: hasConnectedIntegration, pageId: 'settings', icon: Link2 },
+    { id: 'agent', label: 'Create an AI agent', completed: aiAgents.length > 0, pageId: 'agents', icon: Bot },
+    { id: 'workflow', label: 'Set up a workflow', completed: workflowTemplates.length > 0, pageId: 'workflows', icon: Workflow },
+    { id: 'campaign', label: 'Start an outreach campaign', completed: campaigns.length > 0, pageId: 'outreach', icon: Megaphone },
+  ]
+
+  const completedCount = items.filter((i) => i.completed).length
+  const allDone = completedCount === items.length
+  const progressPercent = (completedCount / items.length) * 100
+
+  return (
+    <motion.div variants={itemVariants}>
+      <Card className="py-0">
+        <CardHeader className="pb-3 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Setup Checklist</CardTitle>
+              <CardDescription>
+                {allDone
+                  ? 'All set!'
+                  : `${completedCount} of ${items.length} completed`}
+              </CardDescription>
+            </div>
+            {allDone && (
+              <div className="flex items-center gap-1.5 text-vf-emerald">
+                <CheckCircle2 className="size-5" />
+                <span className="text-sm font-semibold">All set!</span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4 pt-0">
+          {/* Progress bar */}
+          <div className="mb-4">
+            <Progress value={progressPercent} className="h-2" />
+          </div>
+
+          {/* Checklist items */}
+          <div className="space-y-1">
+            {items.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActivePage(item.pageId)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+                >
+                  <Checkbox
+                    checked={item.completed}
+                    className="pointer-events-none"
+                  />
+                  <Icon className={`size-4 shrink-0 ${item.completed ? 'text-muted-foreground' : 'text-foreground'}`} />
+                  <span className={`text-sm ${item.completed ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>
+                    {item.label}
+                  </span>
+                  {!item.completed && (
+                    <ArrowRight className="ml-auto size-3.5 text-muted-foreground" />
+                  )}
+                </button>
+              )
+            })}
           </div>
         </CardContent>
       </Card>
@@ -613,6 +726,28 @@ function KPICard({
 // ---------------------------------------------------------------------------
 
 function RevenueChart() {
+  const isEmpty = revenueData.length === 0
+
+  if (isEmpty) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Revenue Overview</CardTitle>
+            <CardDescription>Monthly revenue vs target with deal count</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={BarChart3}
+              title="Revenue will appear here"
+              description="Once you close your first deal, revenue trends will be displayed here."
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
       <Card className="h-full py-0">
@@ -688,22 +823,29 @@ function RevenueChart() {
 // ---------------------------------------------------------------------------
 
 function ConversionFunnel() {
-  const maxValue = conversionFunnel[0]?.value ?? 0
+  const allZeros = conversionFunnel.every((s) => s.value === 0)
 
-  if (conversionFunnel.length === 0) {
+  if (conversionFunnel.length === 0 || allZeros) {
     return (
       <motion.div variants={itemVariants} className="h-full">
         <Card className="h-full py-0">
           <CardHeader className="pb-2 pt-6">
             <CardTitle className="text-base font-semibold">Conversion Funnel</CardTitle>
+            <CardDescription>Lead-to-close pipeline</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState icon={Filter} message="No funnel data available" ctaLabel="Import Leads" />
+            <EmptyState
+              icon={Filter}
+              title="Pipeline funnel will build here"
+              description="As leads progress through your pipeline, conversion rates will appear here."
+            />
           </CardContent>
         </Card>
       </motion.div>
     )
   }
+
+  const maxValue = conversionFunnel[0]?.value ?? 0
 
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
@@ -762,8 +904,9 @@ function ConversionFunnel() {
 function PipelineSummary() {
   const { setActivePage } = useAppStore()
   const totalLeads = pipelineStages.reduce((sum, s) => sum + s.count, 0)
+  const allZeroCounts = pipelineStages.every((s) => s.count === 0)
 
-  if (pipelineStages.length === 0) {
+  if (pipelineStages.length === 0 || allZeroCounts) {
     return (
       <motion.div variants={itemVariants} className="h-full">
         <Card className="h-full py-0">
@@ -771,7 +914,12 @@ function PipelineSummary() {
             <CardTitle className="text-base font-semibold">Deal Pipeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <EmptyState icon={Filter} message="No pipeline data available" ctaLabel="Add Leads" onCta={() => setActivePage('crm')} />
+            <EmptyState
+              icon={Users}
+              title="No leads in your pipeline"
+              description="Add your first lead to start tracking your sales pipeline."
+              primaryAction={{ label: 'Add Lead', onClick: () => setActivePage('crm') }}
+            />
           </CardContent>
         </Card>
       </motion.div>
@@ -830,6 +978,30 @@ function PipelineSummary() {
 // ---------------------------------------------------------------------------
 
 function AIUsageMetrics() {
+  const { setActivePage } = useAppStore()
+  const isEmpty = aiUsageMetrics.tokensUsed === 0 && aiUsageMetrics.tasksToday === 0
+
+  if (isEmpty) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">AI Usage Metrics</CardTitle>
+            <CardDescription>Agent resource consumption</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={Bot}
+              title="No AI activity yet"
+              description="Create your first AI agent to start automating tasks."
+              primaryAction={{ label: 'Create Agent', onClick: () => setActivePage('agents') }}
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   const tokenPercent = Math.round((aiUsageMetrics.tokensUsed / aiUsageMetrics.tokensLimit) * 100)
 
   return (
@@ -898,6 +1070,28 @@ function AIUsageMetrics() {
 // ---------------------------------------------------------------------------
 
 function TeamProductivityWidget() {
+  const isEmpty = teamProductivity.tasksCompleted === 0
+
+  if (isEmpty) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Team Productivity</CardTitle>
+            <CardDescription>Team performance overview</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={Users}
+              title="Team activity will appear here"
+              description="As team members join and work, productivity metrics will show here."
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   const activePercent = Math.round((teamProductivity.activeToday / teamProductivity.totalMembers) * 100)
 
   return (
@@ -988,6 +1182,26 @@ function ActivityFeed() {
     ? activities
     : activities.filter((a) => filterMap[activeFilter].includes(a.type))
 
+  if (activities.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+            <CardDescription>Latest updates across your pipeline</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={Inbox}
+              title="No activity yet"
+              description="As you and your team start working, activity will appear here."
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
       <Card className="h-full py-0">
@@ -1018,7 +1232,11 @@ function ActivityFeed() {
         </CardHeader>
         <CardContent className="pb-4 pt-0">
           {filtered.length === 0 ? (
-            <EmptyState icon={Inbox} message="No activity in this category" />
+            <EmptyState
+              icon={Inbox}
+              title="No activity in this category"
+              description="Try selecting a different filter or check back later."
+            />
           ) : (
             <ScrollArea className="h-[300px] pr-2">
               <div className="space-y-1">
@@ -1061,7 +1279,6 @@ function ActivityFeed() {
 
 function AgentStatus() {
   const { setActivePage } = useAppStore()
-  const summaryAgents = aiAgents.slice(0, 8)
 
   if (aiAgents.length === 0) {
     return (
@@ -1069,14 +1286,22 @@ function AgentStatus() {
         <Card className="h-full py-0">
           <CardHeader className="pb-2 pt-6">
             <CardTitle className="text-base font-semibold">AI Agent Status</CardTitle>
+            <CardDescription>Real-time agent monitoring</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState icon={Bot} message="No AI agents configured" ctaLabel="Set Up Agents" onCta={() => setActivePage('agents')} />
+            <EmptyState
+              icon={Bot}
+              title="No AI agents yet"
+              description="Create your first AI agent to start automating your workflow."
+              primaryAction={{ label: 'Create Agent', onClick: () => setActivePage('agents') }}
+            />
           </CardContent>
         </Card>
       </motion.div>
     )
   }
+
+  const summaryAgents = aiAgents.slice(0, 8)
 
   return (
     <motion.div variants={itemVariants} whileHover={{ scale: 1.005 }} className="h-full">
@@ -1166,6 +1391,28 @@ function AgentStatus() {
 
 function UpcomingDeadlines() {
   const { setActivePage } = useAppStore()
+
+  if (projects.length === 0) {
+    return (
+      <motion.div variants={itemVariants} className="h-full">
+        <Card className="h-full py-0">
+          <CardHeader className="pb-2 pt-6">
+            <CardTitle className="text-base font-semibold">Upcoming Deadlines</CardTitle>
+            <CardDescription>Project deadlines approaching</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={Calendar}
+              title="No upcoming deadlines"
+              description="Create a project to start tracking deadlines."
+              primaryAction={{ label: 'Create Project', onClick: () => setActivePage('projects') }}
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   const upcomingProjects = [...projects]
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
     .slice(0, 5)
@@ -1175,21 +1422,6 @@ function UpcomingDeadlines() {
     review: 'bg-vf-amber/15 text-vf-amber',
     onboarding: 'bg-vf-cyan/15 text-vf-cyan',
     delivery: 'bg-vf-emerald/15 text-vf-emerald',
-  }
-
-  if (projects.length === 0) {
-    return (
-      <motion.div variants={itemVariants} className="h-full">
-        <Card className="h-full py-0">
-          <CardHeader className="pb-2 pt-6">
-            <CardTitle className="text-base font-semibold">Upcoming Deadlines</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EmptyState icon={Calendar} message="No upcoming deadlines" ctaLabel="Create Project" onCta={() => setActivePage('projects')} />
-          </CardContent>
-        </Card>
-      </motion.div>
-    )
   }
 
   return (
@@ -1288,6 +1520,15 @@ export function DashboardPage() {
   // Live KPIs with simulated fluctuation
   const [liveKPIs, setLiveKPIs] = useState(dashboardKPIs)
 
+  // Determine if we are in onboarding (zero-state) mode
+  const hasConnectedIntegration = integrations.some((i) => i.status === 'connected')
+  const isOnboardingMode =
+    leadsData.length === 0 &&
+    aiAgents.length === 0 &&
+    !hasConnectedIntegration &&
+    workflowTemplates.length === 0 &&
+    campaigns.length === 0
+
   // Initial loading skeleton (1.5s)
   useEffect(() => {
     const t = setTimeout(() => setIsLoading(false), 1500)
@@ -1381,6 +1622,17 @@ export function DashboardPage() {
         >
           <WelcomeBanner />
         </motion.div>
+
+        {/* ---- Setup Checklist (onboarding) ---- */}
+        {isOnboardingMode && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <SetupChecklist />
+          </motion.div>
+        )}
 
         {/* ---- Quick Actions ---- */}
         <motion.div

@@ -104,6 +104,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { EmptyState } from '@/components/ui/empty-state'
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -941,6 +942,63 @@ export function BugsPage() {
   const resolvedPct = totalBugs > 0 ? Math.round(((visibleBugs.filter((b) => b.status === 'fixed').length + visibleBugs.filter((b) => b.status === 'rejected').length) / totalBugs) * 100) : 0
 
   if (loading) return <PageSkeleton />
+
+  // When there are no bugs at all, show premium empty state
+  if (visibleBugs.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col gap-6 p-4 md:p-6">
+        {/* Header - keep visible */}
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Bug className="h-6 w-6 text-red-500" />
+                Bug Tracker
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {currentUser?.isTester
+                  ? `Report and track bugs found during testing — ${currentUser.name}`
+                  : 'Track, prioritize, and resolve issues across all modules'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button className="h-9 bg-red-600 hover:bg-red-700 text-white" onClick={() => setReportOpen(true)}>
+                <Plus className="h-4 w-4 mr-1.5" />{currentUser?.isTester ? 'Report New Bug' : 'Report Bug'}
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Simplified stats - all zeros */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, i) => (
+            <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
+              <Card className="py-4">
+                <CardContent className="flex items-center gap-4 px-4">
+                  <div className={`rounded-lg p-2.5 ${stat.bgClass} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold leading-tight">0 bugs</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        <EmptyState
+          icon={Bug}
+          title="No bugs reported"
+          description="Your workspace is running smoothly. When issues arise, track and resolve them here."
+          primaryAction={{ label: 'Report Bug', onClick: () => setReportOpen(true) }}
+        />
+
+        {/* Dialogs */}
+        <ReportBugDialog open={reportOpen} onOpenChange={setReportOpen} onSave={handleReportBug} />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col gap-6 p-4 md:p-6">

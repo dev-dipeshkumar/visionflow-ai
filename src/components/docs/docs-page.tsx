@@ -1,6 +1,7 @@
 'use client'
 
 import { docsCategories, docsArticles, docsVersions } from '@/lib/data'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Card,
   CardContent,
@@ -491,7 +492,7 @@ function SidebarNav({
                       </button>
                     ))}
                     {categoryArticles.length === 0 && (
-                      <p className="px-2.5 py-1.5 text-[11px] text-muted-foreground italic">No articles match</p>
+                      <p className="px-2.5 py-1.5 text-[11px] text-muted-foreground italic">No articles yet</p>
                     )}
                   </div>
                 </motion.div>
@@ -1515,7 +1516,7 @@ export function DocsPage() {
         {/* ----------------------------------------------------------------- */}
         <div className="flex gap-4">
           {/* Expandable Sidebar Nav - visible on browse/articles tabs */}
-          {sidebarVisible && (activeTab === 'browse' || activeTab === 'articles') && (
+          {sidebarVisible && (activeTab === 'browse' || activeTab === 'articles' || docsArticles.length === 0) && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 260 }}
@@ -1557,6 +1558,16 @@ export function DocsPage() {
                 </Button>
               </div>
             )}
+
+            {/* Empty state when no articles exist */}
+            {docsArticles.length === 0 ? (
+              <EmptyState
+                icon={BookOpen}
+                title="Documentation coming soon"
+                description="We're preparing comprehensive guides and API references. Check back soon for updates."
+              />
+            ) : (
+            <>
 
             {/* ----------------------------------------------------------------- */}
             {/* Tabs: Browse / Articles / API / Tutorials / Bookmarks */}
@@ -1729,6 +1740,8 @@ export function DocsPage() {
                 )}
               </TabsContent>
             </Tabs>
+            </>
+            )}
           </div>
         </div>
       </div>

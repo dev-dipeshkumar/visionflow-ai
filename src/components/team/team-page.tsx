@@ -128,6 +128,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { EmptyState } from '@/components/ui/empty-state'
 
 // ─── Role & Status Config ─────────────────────────────────────────────────
 
@@ -619,6 +620,19 @@ function TeamTab({ members, onEdit, onDelete, onView }: {
     else { setSortField(field); setSortDir('asc') }
   }
 
+  // When the base member list (non-testers) is empty, show premium empty state
+  const nonTesters = members.filter((m) => !m.isTester)
+  if (nonTesters.length === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title="No team members yet"
+        description="Invite your first team member to start collaborating on leads, campaigns, and projects."
+        primaryAction={{ label: 'Invite Member', onClick: () => {} }}
+      />
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Search & Filters */}
@@ -749,13 +763,22 @@ function TestersTab({ members }: { members: TeamMember[] }) {
         <div className="flex items-center gap-2 mb-4">
           <KeyRound className="h-5 w-5 text-amber-500" />
           <h3 className="text-lg font-semibold">Tester Credentials</h3>
-          <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-600 border-amber-500/25">{testers.length} Accounts</Badge>
+          <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-600 border-amber-500/25">{testerCredentials.length} Accounts</Badge>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {testerCredentials.map((cred) => (
-            <CredentialCard key={cred.email} cred={cred} bugsReported={bugs.filter((b) => b.reporter === cred.name).length} />
-          ))}
-        </div>
+        {testerCredentials.length === 0 ? (
+          <EmptyState
+            icon={FlaskConical}
+            title="No tester accounts yet"
+            description="Create tester accounts to enable QA testing with dedicated credentials and permissions."
+            primaryAction={{ label: 'Create Tester', onClick: () => {} }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {testerCredentials.map((cred) => (
+              <CredentialCard key={cred.email} cred={cred} bugsReported={bugs.filter((b) => b.reporter === cred.name).length} />
+            ))}
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -1005,10 +1028,12 @@ function ActivityTab({ logs }: { logs: ActivityLog[] }) {
         })}
 
         {filtered.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-            <ScrollText className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">No activity logs found</p>
-          </motion.div>
+          <EmptyState
+            icon={ScrollText}
+            title="No activity logs yet"
+            description="Activity will appear here as team members interact with the workspace."
+            primaryAction={{ label: 'Refresh', onClick: () => {} }}
+          />
         )}
       </motion.div>
 
@@ -1171,9 +1196,43 @@ function PermissionsTab() {
 function AnalyticsTab({ members }: { members: TeamMember[] }) {
   const data = teamAnalytics
 
-  const maxLoginActivity = Math.max(...data.loginActivity.map((d) => d.admin + d.manager + d.member + d.tester))
-  const maxAction = Math.max(...data.actionDistribution.map((d) => d.actions))
-  const maxContributorActions = Math.max(...data.topContributors.map((c) => c.actions))
+  // When there are no members, show simplified analytics
+  if (members.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Logins (7d)', value: 0, icon: LogIn, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+            { label: 'Actions This Week', value: 0, icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+            { label: 'Avg Tasks/Member', value: 0, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+            { label: 'Bug Resolution Rate', value: '0%', icon: Bug, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          ].map((stat, i) => (
+            <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
+              <Card className="py-4">
+                <CardContent className="flex items-center gap-4 px-4">
+                  <div className={`rounded-lg p-2.5 ${stat.bg} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold leading-tight">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="No team analytics yet"
+          description="Analytics will populate as team members join and interact with the workspace."
+          className="mt-4"
+        />
+      </div>
+    )
+  }
+
+  const maxLoginActivity = data.loginActivity.length > 0 ? Math.max(...data.loginActivity.map((d) => d.admin + d.manager + d.member + d.tester)) : 0
+  const maxAction = data.actionDistribution.length > 0 ? Math.max(...data.actionDistribution.map((d) => d.actions)) : 0
+  const maxContributorActions = data.topContributors.length > 0 ? Math.max(...data.topContributors.map((c) => c.actions)) : 0
 
   return (
     <div className="space-y-6">

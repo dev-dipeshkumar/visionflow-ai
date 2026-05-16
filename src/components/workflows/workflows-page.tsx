@@ -111,6 +111,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   ResponsiveContainer,
   BarChart,
@@ -210,147 +211,13 @@ const statusBadgeConfig: Record<WorkflowStatus, { label: string; dotClass: strin
   error: { label: 'Error', dotClass: 'bg-red-500', badgeClass: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/25' },
 }
 
-const initialWorkflows: WorkflowData[] = [
-  {
-    id: 'w1', name: 'Full Sales Pipeline', type: 'lead_generation',
-    description: 'End-to-end lead generation to close with automated qualification, outreach, and deal tracking.',
-    nodes: [
-      { id: 'n1', label: 'New Lead Detected', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'Research Prospect', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-      { id: 'n3', label: 'Score & Qualify', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n4', label: 'Send Personalized Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n5', label: 'Wait 2 Days', type: 'delay', icon: Timer, color: 'bg-muted text-muted-foreground', borderColor: 'border-border' },
-      { id: 'n6', label: 'LinkedIn Follow-up', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n7', label: 'Book Meeting', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n8', label: 'Notify Slack', type: 'webhook', icon: Webhook, color: 'bg-emerald-500 text-white', borderColor: 'border-emerald-500/40' },
-    ],
-    status: 'active', runs: 234, successRate: 94.2, avgDuration: '2.4m', lastRun: '2 min ago', createdAt: '2026-03-01', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['sales', 'automation'],
-  },
-  {
-    id: 'w2', name: 'Client Onboarding', type: 'onboarding',
-    description: 'Automated onboarding from signed deal to kickoff, including setup, introductions, and training.',
-    nodes: [
-      { id: 'n1', label: 'Deal Won Trigger', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'Create Client Workspace', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n3', label: 'Send Welcome Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n4', label: 'AI Setup Assistant', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-      { id: 'n5', label: 'Schedule Kickoff', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n6', label: 'Assign Team', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-    ],
-    status: 'active', runs: 156, successRate: 97.4, avgDuration: '1.8m', lastRun: '15 min ago', createdAt: '2026-03-15', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['onboarding', 'client'],
-  },
-  {
-    id: 'w3', name: 'Service Delivery', type: 'delivery',
-    description: 'AI-powered service delivery with automated generation, review cycles, and client approval.',
-    nodes: [
-      { id: 'n1', label: 'Project Started', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'AI Content Generation', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-      { id: 'n3', label: 'Quality Review', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n4', label: 'Client Review Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n5', label: 'Wait for Approval', type: 'delay', icon: Timer, color: 'bg-muted text-muted-foreground', borderColor: 'border-border' },
-      { id: 'n6', label: 'Revision Check', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n7', label: 'Final Delivery', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n8', label: 'Invoice via Stripe', type: 'webhook', icon: Webhook, color: 'bg-emerald-500 text-white', borderColor: 'border-emerald-500/40' },
-      { id: 'n9', label: 'Close Project', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n10', label: 'Request Testimonial', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-    ],
-    status: 'active', runs: 89, successRate: 91.0, avgDuration: '4.2m', lastRun: '1 hr ago', createdAt: '2026-04-01', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['delivery', 'ai'],
-  },
-  {
-    id: 'w4', name: 'Retention & Upsell', type: 'retention',
-    description: 'Post-delivery follow-up, satisfaction tracking, and upsell opportunity automation.',
-    nodes: [
-      { id: 'n1', label: 'Project Completed', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'Wait 7 Days', type: 'delay', icon: Timer, color: 'bg-muted text-muted-foreground', borderColor: 'border-border' },
-      { id: 'n3', label: 'Satisfaction Survey', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n4', label: 'Score Check', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n5', label: 'Upsell Opportunity', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-    ],
-    status: 'draft', runs: 0, successRate: 0, avgDuration: '-', lastRun: 'Never', createdAt: '2026-04-20', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['retention', 'upsell'],
-  },
-  {
-    id: 'w5', name: 'Multi-Channel Outreach', type: 'outreach',
-    description: 'Coordinated email, LinkedIn, SMS campaigns with smart sequencing and A/B testing.',
-    nodes: [
-      { id: 'n1', label: 'Campaign Trigger', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'AI Personalize', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-      { id: 'n3', label: 'Send Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n4', label: 'Wait 3 Days', type: 'delay', icon: Timer, color: 'bg-muted text-muted-foreground', borderColor: 'border-border' },
-      { id: 'n5', label: 'LinkedIn Connect', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n6', label: 'Engagement Check', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n7', label: 'Final CTA Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-    ],
-    status: 'active', runs: 312, successRate: 88.5, avgDuration: '3.1m', lastRun: '5 min ago', createdAt: '2026-02-15', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['outreach', 'multi-channel'],
-  },
-  {
-    id: 'w6', name: 'Invoice & Payment', type: 'custom',
-    description: 'Automated invoicing, payment reminders, and collection with Stripe integration.',
-    nodes: [
-      { id: 'n1', label: 'Milestone Reached', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'Generate Invoice', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n3', label: 'Send to Client', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n4', label: 'Stripe Payment', type: 'webhook', icon: Webhook, color: 'bg-emerald-500 text-white', borderColor: 'border-emerald-500/40' },
-    ],
-    status: 'active', runs: 178, successRate: 98.3, avgDuration: '1.2m', lastRun: '30 min ago', createdAt: '2026-03-10', createdBy: 'Alex Morgan', isAIAssisted: false, tags: ['finance', 'automation'],
-  },
-  {
-    id: 'w7', name: 'Lead Nurturing Sequence', type: 'lead_generation',
-    description: 'Drip campaign with AI-powered content personalization and behavioral triggers.',
-    nodes: [
-      { id: 'n1', label: 'Lead Subscribed', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'Wait 1 Day', type: 'delay', icon: Timer, color: 'bg-muted text-muted-foreground', borderColor: 'border-border' },
-      { id: 'n3', label: 'Send Value Email', type: 'email', icon: Mail, color: 'bg-primary text-primary-foreground', borderColor: 'border-primary/40' },
-      { id: 'n4', label: 'Engagement Check', type: 'condition', icon: GitBranch, color: 'bg-violet-500 text-white', borderColor: 'border-violet-500/40' },
-      { id: 'n5', label: 'AI Product Recommendation', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-    ],
-    status: 'paused', runs: 67, successRate: 82.1, avgDuration: '2.8m', lastRun: '2 days ago', createdAt: '2026-04-05', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['nurture', 'drip'],
-  },
-  {
-    id: 'w8', name: 'Bug Report Router', type: 'custom',
-    description: 'Automated bug report classification, assignment, and notification workflow for QA teams.',
-    nodes: [
-      { id: 'n1', label: 'Bug Submitted', type: 'trigger', icon: Zap, color: 'bg-amber-500 text-white', borderColor: 'border-amber-500/40' },
-      { id: 'n2', label: 'AI Classify Severity', type: 'ai_agent', icon: Bot, color: 'bg-vf-violet text-white', borderColor: 'border-vf-violet/40' },
-      { id: 'n3', label: 'Assign Developer', type: 'action', icon: Play, color: 'bg-sky-500 text-white', borderColor: 'border-sky-500/40' },
-      { id: 'n4', label: 'Notify Slack', type: 'webhook', icon: Webhook, color: 'bg-emerald-500 text-white', borderColor: 'border-emerald-500/40' },
-    ],
-    status: 'error', runs: 23, successRate: 65.2, avgDuration: '0.8m', lastRun: '3 days ago', createdAt: '2026-04-12', createdBy: 'Alex Morgan', isAIAssisted: true, tags: ['qa', 'bugs'],
-  },
-]
+const initialWorkflows: WorkflowData[] = []
 
-const templateItems: TemplateData[] = [
-  { id: 't1', name: 'Full Sales Pipeline', description: 'End-to-end lead generation to close with automated qualification, outreach, and deal tracking.', steps: 8, category: 'Sales', categoryClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25', icon: BarChart3, popularity: 95, type: 'lead_generation' },
-  { id: 't2', name: 'Client Onboarding', description: 'Automated onboarding from signed deal to kickoff, including setup, introductions, and training.', steps: 6, category: 'Operations', categoryClass: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/25', icon: UserPlus, popularity: 88, type: 'onboarding' },
-  { id: 't3', name: 'Service Delivery', description: 'AI-powered service delivery with automated generation, review cycles, and client approval.', steps: 10, category: 'Delivery', categoryClass: 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/25', icon: Send, popularity: 82, type: 'delivery' },
-  { id: 't4', name: 'Retention & Upsell', description: 'Post-delivery follow-up, satisfaction tracking, and upsell opportunity automation.', steps: 5, category: 'Growth', categoryClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25', icon: Heart, popularity: 76, type: 'retention' },
-  { id: 't5', name: 'Multi-Channel Outreach', description: 'Coordinated email, LinkedIn, SMS campaigns with smart sequencing and A/B testing.', steps: 7, category: 'Marketing', categoryClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25', icon: MessageSquare, popularity: 91, type: 'outreach' },
-  { id: 't6', name: 'Invoice & Payment', description: 'Automated invoicing, payment reminders, and collection with Stripe integration.', steps: 4, category: 'Finance', categoryClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/25', icon: CreditCard, popularity: 70, type: 'custom' },
-]
+const templateItems: TemplateData[] = []
 
-const executionHistory: WorkflowExecution[] = [
-  { id: 'e1', workflowId: 'w1', workflowName: 'Full Sales Pipeline', status: 'completed', startedAt: '2 min ago', duration: '2m 14s', nodesExecuted: 8, totalNodes: 8, triggeredBy: 'New Lead: Emily Chen' },
-  { id: 'e2', workflowId: 'w5', workflowName: 'Multi-Channel Outreach', status: 'completed', startedAt: '5 min ago', duration: '3m 05s', nodesExecuted: 7, totalNodes: 7, triggeredBy: 'Campaign: SaaS Q2' },
-  { id: 'e3', workflowId: 'w2', workflowName: 'Client Onboarding', status: 'running', startedAt: '8 min ago', duration: '-', nodesExecuted: 4, totalNodes: 6, triggeredBy: 'Deal Won: TechCorp' },
-  { id: 'e4', workflowId: 'w3', workflowName: 'Service Delivery', status: 'completed', startedAt: '1 hr ago', duration: '4m 12s', nodesExecuted: 10, totalNodes: 10, triggeredBy: 'Project Started: DesignHub' },
-  { id: 'e5', workflowId: 'w6', workflowName: 'Invoice & Payment', status: 'completed', startedAt: '30 min ago', duration: '1m 18s', nodesExecuted: 4, totalNodes: 4, triggeredBy: 'Milestone: Phase 2 Complete' },
-  { id: 'e6', workflowId: 'w8', workflowName: 'Bug Report Router', status: 'failed', startedAt: '3 days ago', duration: '0m 48s', nodesExecuted: 2, totalNodes: 4, triggeredBy: 'Bug Report: UI Crash', error: 'AI classification timeout' },
-  { id: 'e7', workflowId: 'w1', workflowName: 'Full Sales Pipeline', status: 'completed', startedAt: '1 hr ago', duration: '2m 30s', nodesExecuted: 8, totalNodes: 8, triggeredBy: 'New Lead: Rachel Green' },
-  { id: 'e8', workflowId: 'w5', workflowName: 'Multi-Channel Outreach', status: 'completed', startedAt: '2 hrs ago', duration: '3m 22s', nodesExecuted: 7, totalNodes: 7, triggeredBy: 'Campaign: Fintech Leaders' },
-  { id: 'e9', workflowId: 'w7', workflowName: 'Lead Nurturing Sequence', status: 'cancelled', startedAt: '2 days ago', duration: '1m 05s', nodesExecuted: 3, totalNodes: 5, triggeredBy: 'Manual: Alex Morgan' },
-  { id: 'e10', workflowId: 'w2', workflowName: 'Client Onboarding', status: 'completed', startedAt: '3 hrs ago', duration: '1m 52s', nodesExecuted: 6, totalNodes: 6, triggeredBy: 'Deal Won: Innovate Co' },
-  { id: 'e11', workflowId: 'w3', workflowName: 'Service Delivery', status: 'completed', startedAt: '5 hrs ago', duration: '4m 45s', nodesExecuted: 10, totalNodes: 10, triggeredBy: 'Project Started: GrowthLab' },
-  { id: 'e12', workflowId: 'w1', workflowName: 'Full Sales Pipeline', status: 'completed', startedAt: '6 hrs ago', duration: '2m 08s', nodesExecuted: 8, totalNodes: 8, triggeredBy: 'New Lead: Marcus Johnson' },
-]
+const executionHistory: WorkflowExecution[] = []
 
-const executionTrendData = [
-  { day: 'Mon', completed: 12, failed: 1, running: 2 },
-  { day: 'Tue', completed: 18, failed: 2, running: 1 },
-  { day: 'Wed', completed: 15, failed: 0, running: 3 },
-  { day: 'Thu', completed: 22, failed: 1, running: 2 },
-  { day: 'Fri', completed: 19, failed: 3, running: 1 },
-  { day: 'Sat', completed: 8, failed: 0, running: 0 },
-  { day: 'Sun', completed: 5, failed: 0, running: 0 },
-]
+const executionTrendData: { day: string; completed: number; failed: number; running: number }[] = []
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1390,7 +1257,7 @@ function BuilderTab({ workflow, onSave }: { workflow: WorkflowData | null; onSav
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Select Agent</label>
                     <div className="flex flex-wrap gap-1.5">
-                      {['Lead Scout', 'Prospect Intel', 'Outreach Pro', 'CRM Brain', 'Proposal Forge'].map((a, i) => (
+                      {([] as string[]).map((a, i) => (
                         <Badge key={a} variant={i === 0 ? 'default' : 'outline'} className="cursor-pointer px-2 py-0.5 text-[10px]">{a}</Badge>
                       ))}
                     </div>
@@ -1646,7 +1513,9 @@ export function WorkflowsPage() {
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => {
-      setWorkflows(initialWorkflows)
+      if (seedWorkflows.length > 0) {
+        setWorkflows(initialWorkflows)
+      }
       setLoading(false)
     }, 800)
     return () => clearTimeout(timer)
@@ -1791,6 +1660,8 @@ export function WorkflowsPage() {
 
   if (loading) return <WorkflowsSkeleton />
 
+  const isEmpty = seedWorkflows.length === 0
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1814,6 +1685,16 @@ export function WorkflowsPage() {
         </Button>
       </div>
 
+      {isEmpty ? (
+        <EmptyState
+          icon={Workflow}
+          title="No workflows created"
+          description="Build your first workflow to automate repetitive tasks and streamline your business processes."
+          primaryAction={{ label: 'Create Workflow', onClick: () => {} }}
+          secondaryAction={{ label: 'Browse Templates', onClick: () => {}, variant: 'outline' }}
+        />
+      ) : (
+      <>
       {/* Stats Cards */}
       <motion.div
         className="grid grid-cols-2 gap-4 lg:grid-cols-4"
@@ -1880,6 +1761,8 @@ export function WorkflowsPage() {
           <ExecutionsTab data={executionHistory} />
         </TabsContent>
       </Tabs>
+      </>
+      )}
 
       {/* Workflow Detail Dialog */}
       <WorkflowDetailDialog

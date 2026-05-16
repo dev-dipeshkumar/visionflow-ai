@@ -77,6 +77,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast, toast } from '@/hooks/use-toast'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { EmptyState } from '@/components/ui/empty-state'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Lead {
@@ -1065,7 +1066,7 @@ function LeadDetailDialog({
             {leadActivityList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Activity className="size-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium text-muted-foreground">No activity recorded</p>
+                <p className="text-sm font-medium text-muted-foreground">No activity recorded yet</p>
                 <p className="text-xs text-muted-foreground mt-1">Activities will appear here as you interact with this lead</p>
               </div>
             ) : (
@@ -1833,40 +1834,44 @@ export function CRMPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads..."
-                value={searchInput}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 w-full sm:w-[200px] md:w-[260px] h-9"
-              />
-            </div>
+            {leads.length > 0 && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search leads..."
+                    value={searchInput}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 w-full sm:w-[200px] md:w-[260px] h-9"
+                  />
+                </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className={`h-9 gap-1.5 ${showFilters ? 'bg-primary/10 border-primary/30' : ''}`}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4" />
-              Filters
-              {(filters.industry !== 'all' || filters.source !== 'all' || filters.scoreMin || filters.scoreMax) && (
-                <Badge variant="secondary" className="ml-1 px-1 py-0 text-[9px]">On</Badge>
-              )}
-            </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`h-9 gap-1.5 ${showFilters ? 'bg-primary/10 border-primary/30' : ''}`}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {(filters.industry !== 'all' || filters.source !== 'all' || filters.scoreMin || filters.scoreMax) && (
+                    <Badge variant="secondary" className="ml-1 px-1 py-0 text-[9px]">On</Badge>
+                  )}
+                </Button>
 
-            <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
-            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => handleExport()}>
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+                <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => handleExport()}>
+                  <Download className="h-4 w-4" />
+                  Export
+                </Button>
 
-            <Button variant="outline" size="sm" className="h-9 gap-1.5">
-              <Upload className="h-4 w-4" />
-              Import
-            </Button>
+                <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                  <Upload className="h-4 w-4" />
+                  Import
+                </Button>
+              </>
+            )}
 
             <Button size="sm" className="h-9 gap-1.5" onClick={() => setAddLeadOpen(true)}>
               <Plus className="h-4 w-4" />
@@ -1878,7 +1883,7 @@ export function CRMPage() {
 
       {/* ── Advanced Filters ──────────────────────────────────────── */}
       <AnimatePresence>
-        {showFilters && (
+        {showFilters && leads.length > 0 && (
           <AdvancedFilters
             industries={industries}
             sources={sources}
@@ -1890,63 +1895,76 @@ export function CRMPage() {
       </AnimatePresence>
 
       {/* ── Stats ──────────────────────────────────────────────────── */}
-      <StatsBar leads={filteredLeads} />
+      <StatsBar leads={leads} />
 
-      {/* ── Conversion Analytics ────────────────────────────────────── */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <ConversionAnalytics leads={filteredLeads} />
-      </motion.div>
+      {leads.length === 0 ? (
+        /* ── Empty State ───────────────────────────────────────────── */
+        <EmptyState
+          icon={Users}
+          title="No leads yet"
+          description="Import leads or create your first pipeline contact to start tracking opportunities."
+          primaryAction={{ label: 'Add Lead', onClick: () => setAddLeadOpen(true) }}
+          secondaryAction={{ label: 'Import CSV', onClick: () => {}, variant: 'outline' }}
+        />
+      ) : (
+        <>
+          {/* ── Conversion Analytics ────────────────────────────────────── */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <ConversionAnalytics leads={filteredLeads} />
+          </motion.div>
 
-      {/* ── Tabs ───────────────────────────────────────────────────── */}
-      <Tabs defaultValue="pipeline" className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between">
-          <TabsList className="w-fit">
-            <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-            <TabsTrigger value="table">Table</TabsTrigger>
-          </TabsList>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="size-3.5" />
-            <span>{filteredLeads.length} of {leads.length} leads</span>
-          </div>
-        </div>
+          {/* ── Tabs ───────────────────────────────────────────────────── */}
+          <Tabs defaultValue="pipeline" className="flex-1 flex flex-col">
+            <div className="flex items-center justify-between">
+              <TabsList className="w-fit">
+                <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+                <TabsTrigger value="table">Table</TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Zap className="size-3.5" />
+                <span>{filteredLeads.length} of {leads.length} leads</span>
+              </div>
+            </div>
 
-        <TabsContent value="pipeline" className="flex-1 mt-4">
-          {/* Mobile: vertical stack with stage filter */}
-          <MobilePipelineView
-            filteredLeads={filteredLeads}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
-            onOpenDetail={handleOpenDetail}
-            mobileStage={mobileStage}
-            onMobileStageChange={setMobileStage}
-          />
+            <TabsContent value="pipeline" className="flex-1 mt-4">
+              {/* Mobile: vertical stack with stage filter */}
+              <MobilePipelineView
+                filteredLeads={filteredLeads}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                onOpenDetail={handleOpenDetail}
+                mobileStage={mobileStage}
+                onMobileStageChange={setMobileStage}
+              />
 
-          {/* Desktop: horizontal scroll */}
-          <div className="hidden lg:block">
-            <PipelineView
-              filteredLeads={filteredLeads}
-              selectedIds={selectedIds}
-              onSelect={handleSelect}
-              onOpenDetail={handleOpenDetail}
-              onAddLead={() => setAddLeadOpen(true)}
-            />
-          </div>
-        </TabsContent>
+              {/* Desktop: horizontal scroll */}
+              <div className="hidden lg:block">
+                <PipelineView
+                  filteredLeads={filteredLeads}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onOpenDetail={handleOpenDetail}
+                  onAddLead={() => setAddLeadOpen(true)}
+                />
+              </div>
+            </TabsContent>
 
-        <TabsContent value="table" className="flex-1 mt-4">
-          <TableView
-            leads={filteredLeads}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
-            onSelectAll={handleSelectAll}
-            onOpenDetail={handleOpenDetail}
-          />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="table" className="flex-1 mt-4">
+              <TableView
+                leads={filteredLeads}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                onSelectAll={handleSelectAll}
+                onOpenDetail={handleOpenDetail}
+              />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
 
       {/* ── Bulk Actions Bar ──────────────────────────────────────── */}
       <AnimatePresence>

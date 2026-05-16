@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useAppStore } from '@/lib/store'
+import { chatMessages } from '@/lib/data'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Send,
   Bot,
@@ -156,48 +158,7 @@ const AI_MODELS = [
   { id: 'claude-3', name: 'Claude 3 Opus', badge: 'Reasoning' },
 ]
 
-const promptTemplates: PromptTemplate[] = [
-  {
-    id: 'pt1', name: 'Find Leads', description: 'Search for qualified leads matching your ICP',
-    prompt: 'Find me qualified leads in the SaaS vertical with $1M-$10M revenue that are actively hiring marketing roles. Score and enrich the results.',
-    icon: Search, category: 'sales', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  },
-  {
-    id: 'pt2', name: 'Generate Proposal', description: 'Create a personalized proposal for a prospect',
-    prompt: 'Generate a personalized proposal for a mid-market SaaS prospect. Include pricing tiers, implementation timeline, and ROI projections.',
-    icon: FileText, category: 'sales', color: 'bg-vf-teal/15 text-vf-teal',
-  },
-  {
-    id: 'pt3', name: 'Analyze Pipeline', description: 'Get insights on your current pipeline health',
-    prompt: 'Analyze my current sales pipeline. Show conversion rates by stage, identify bottlenecks, and suggest actions to accelerate deals.',
-    icon: BarChart3, category: 'analytics', color: 'bg-vf-cyan/15 text-vf-cyan',
-  },
-  {
-    id: 'pt4', name: 'Draft Email Sequence', description: 'Create a multi-step outreach email sequence',
-    prompt: 'Create a 5-step email outreach sequence for cold prospects in the fintech industry. Personalize each step with relevant pain points.',
-    icon: Zap, category: 'marketing', color: 'bg-vf-amber/15 text-vf-amber',
-  },
-  {
-    id: 'pt5', name: 'Score & Prioritize', description: 'Score leads and prioritize outreach targets',
-    prompt: 'Score all uncontacted leads in my pipeline using firmographic fit, behavioral signals, and intent data. Prioritize the top 20 for immediate outreach.',
-    icon: Target, category: 'sales', color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-  },
-  {
-    id: 'pt6', name: 'Build Workflow', description: 'Design an automated workflow for a process',
-    prompt: 'Design an automated lead nurturing workflow that handles new leads from capture through qualification, with AI-powered follow-ups and scoring.',
-    icon: Workflow, category: 'dev', color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
-  },
-  {
-    id: 'pt7', name: 'Team Report', description: 'Generate a team performance report',
-    prompt: 'Generate a weekly team performance report showing activity metrics, deal progress, pipeline changes, and AI agent efficiency.',
-    icon: Users, category: 'analytics', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
-  },
-  {
-    id: 'pt8', name: 'Competitor Analysis', description: 'Research competitors and market positioning',
-    prompt: 'Analyze our top 5 competitors in the AI sales automation space. Compare features, pricing, market positioning, and identify opportunities.',
-    icon: Lightbulb, category: 'marketing', color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  },
-]
+const promptTemplates: PromptTemplate[] = []
 
 const aiCommands: AICommand[] = [
   { name: '/find-leads', description: 'Search for new leads', icon: Search, preview: 'Finding leads...' },
@@ -210,117 +171,18 @@ const aiCommands: AICommand[] = [
   { name: '/help', description: 'Show all commands', icon: Command, preview: 'Loading help...' },
 ]
 
-const aiMemoryItems: AIMemoryItem[] = [
-  { id: 'm1', key: 'Company Size', value: 'Mid-market (50-500 employees)', source: 'conversation', updatedAt: '2 hours ago' },
-  { id: 'm2', key: 'Target Industry', value: 'SaaS, Fintech, HealthTech', source: 'user-input', updatedAt: '1 day ago' },
-  { id: 'm3', key: 'Revenue Range', value: '$1M - $10M ARR', source: 'conversation', updatedAt: '3 days ago' },
-  { id: 'm4', key: 'Preferred Channels', value: 'Email, LinkedIn', source: 'conversation', updatedAt: '5 days ago' },
-  { id: 'm5', key: 'Sales Cycle', value: '30-60 days average', source: 'system', updatedAt: '1 week ago' },
-  { id: 'm6', key: 'Key Pain Points', value: 'Manual lead research, slow follow-ups', source: 'conversation', updatedAt: '1 week ago' },
-]
+const aiMemoryItems: AIMemoryItem[] = []
 
-const activeAgents = [
-  { name: 'Lead Scout', status: 'active' as const, color: 'bg-emerald-500' },
-  { name: 'Outreach Pro', status: 'active' as const, color: 'bg-vf-teal' },
-  { name: 'CRM Brain', status: 'active' as const, color: 'bg-vf-cyan' },
-  { name: 'Delivery Agent', status: 'paused' as const, color: 'bg-vf-amber' },
-]
+const activeAgents: { name: string; status: 'active' | 'paused'; color: string }[] = []
 
-const recentActivity = [
-  { text: 'Lead Scout found 12 new leads', time: '2 min ago', type: 'agent' as const },
-  { text: 'Outreach Pro sent 8 emails', time: '5 min ago', type: 'agent' as const },
-  { text: 'CRM Brain enriched 4 contacts', time: '12 min ago', type: 'agent' as const },
-  { text: 'Proposal generated for TechCorp', time: '28 min ago', type: 'action' as const },
-  { text: 'Workflow "Lead Nurture" completed', time: '1 hr ago', type: 'workflow' as const },
-]
+const recentActivity: { text: string; time: string; type: 'agent' | 'action' | 'workflow' }[] = []
 
 // ---------------------------------------------------------------------------
 // Seed chat sessions
 // ---------------------------------------------------------------------------
 
 function createInitialSessions(): ChatSession[] {
-  return [
-    {
-      id: 's1',
-      title: 'SaaS Lead Generation Strategy',
-      createdAt: 'Today, 10:00 AM',
-      updatedAt: '10:05 AM',
-      pinned: true,
-      unread: 0,
-      tags: ['sales', 'leads'],
-      model: 'GPT-4',
-      tokenCount: 2847,
-      messages: [
-        { id: 'm1-1', role: 'assistant', content: "Hello! I'm your VisionFlow AI assistant. I can help you manage leads, run campaigns, generate proposals, and automate your entire business workflow. What would you like to do?", time: '10:00 AM' },
-        { id: 'm1-2', role: 'user', content: 'Find me 20 new SaaS leads in the $1M-$10M revenue range that are actively hiring marketing roles', time: '10:01 AM' },
-        { id: 'm1-3', role: 'assistant', content: "I've deployed the **Lead Scout** agent to search across LinkedIn, Apollo, and Crunchbase. Found **23 matches**! Here are the top leads:\n\n1. **TechVista Labs** - $4.2M ARR, hiring Head of Growth\n2. **CloudSync Pro** - $7.8M ARR, hiring VP Marketing\n3. **DataPulse** - $2.1M ARR, hiring Marketing Director\n4. **FlowMetrics** - $5.5M ARR, hiring CMO\n5. **NexGen CRM** - $9.2M ARR, hiring Growth Lead\n\nI've scored and enriched all 23 leads. Want me to start personalized outreach to the top 10?", time: '10:02 AM', command: '/find-leads' },
-        { id: 'm1-4', role: 'user', content: 'Yes, start outreach to the top 10 with our SaaS decision maker template', time: '10:03 AM' },
-        { id: 'm1-5', role: 'assistant', content: "**Outreach Pro** agent activated! I've:\n\n- Customized 10 hyper-personalized emails using prospect intel\n- Scheduled sends for optimal engagement windows\n- Set up 5-step follow-up sequences\n- Added all contacts to the CRM pipeline\n\nFirst emails go out at 9:15 AM tomorrow. I'll track opens, clicks, and replies automatically. Want me to set up LinkedIn connection requests too?", time: '10:04 AM', command: '/run-outreach' },
-      ],
-    },
-    {
-      id: 's2',
-      title: 'Campaign Performance Analysis',
-      createdAt: 'Yesterday, 3:30 PM',
-      updatedAt: '3:45 PM',
-      pinned: false,
-      unread: 2,
-      tags: ['analytics', 'campaigns'],
-      model: 'GPT-4 Turbo',
-      tokenCount: 1523,
-      messages: [
-        { id: 'm2-1', role: 'user', content: 'How did our Q2 outreach campaigns perform compared to Q1?', time: '3:30 PM' },
-        { id: 'm2-2', role: 'assistant', content: "Here's your **Q2 vs Q1 Campaign Performance** analysis:\n\n| Metric | Q1 | Q2 | Change |\n|--------|----|----|--------|\n| Emails Sent | 1,247 | 1,892 | +51.7% |\n| Open Rate | 23.4% | 31.2% | +7.8pp |\n| Reply Rate | 4.1% | 6.8% | +2.7pp |\n| Meetings Booked | 18 | 34 | +88.9% |\n| Deals Closed | 3 | 7 | +133.3% |\n\n**Key Insights:**\n- AI-personalized subject lines boosted open rates by 33%\n- Multi-channel sequences outperformed email-only by 2.4x\n- Best performing time slot: Tuesday 10:00 AM - 11:30 AM\n\nShall I create an optimized Q3 strategy based on these insights?", time: '3:32 PM', command: '/analyze-pipeline' },
-      ],
-    },
-    {
-      id: 's3',
-      title: 'Proposal for TechCorp Deal',
-      createdAt: 'May 12, 2026',
-      updatedAt: '4:20 PM',
-      pinned: false,
-      unread: 0,
-      tags: ['sales', 'proposal'],
-      model: 'GPT-4',
-      tokenCount: 4210,
-      messages: [
-        { id: 'm3-1', role: 'user', content: 'Generate a proposal for TechCorp - they are a $5M ARR SaaS company looking for lead generation and CRM automation', time: '4:15 PM' },
-        { id: 'm3-2', role: 'assistant', content: "I've generated a customized proposal for TechCorp. Here's the summary:\n\n**Proposal: VisionFlow AI for TechCorp**\n\n**Executive Summary**\nTechCorp's current manual lead generation process costs approximately $8,400/month in sales rep time. VisionFlow AI can automate 80% of this workflow while improving lead quality by 3.2x.\n\n**Recommended Package: Professional Plan**\n- Lead Scout Agent: Unlimited lead discovery\n- Outreach Pro: Multi-channel sequencing\n- CRM Brain: Pipeline analytics & predictions\n- 10 team member seats\n\n**Pricing:** $199/month (annual) or $249/month (monthly)\n**Implementation:** 2-week onboarding with dedicated CSM\n**ROI Projection:** 340% within 6 months\n\nShall I export this as a PDF or schedule a demo call?", time: '4:17 PM', command: '/generate-proposal' },
-        { id: 'm3-3', role: 'user', content: 'Add a competitive comparison section showing how we stack up against Outreach.io and Salesloft', time: '4:19 PM' },
-        { id: 'm3-4', role: 'assistant', content: "Done! I've added a competitive comparison section:\n\n**VisionFlow AI vs. Competitors**\n\n| Feature | VisionFlow AI | Outreach.io | Salesloft |\n|---------|---------------|-------------|-----------|\n| AI Lead Discovery | Included | Add-on ($99/mo) | Not available |\n| Multi-Channel | Email + LinkedIn + SMS | Email + LinkedIn | Email only |\n| AI Personalization | GPT-4 powered | Basic templates | Basic templates |\n| CRM Integration | Native 2-way | Native | API only |\n| Pipeline Analytics | AI-powered | Basic reporting | Basic reporting |\n| Starting Price | $199/mo | $300/mo | $250/mo |\n\n**Our Advantages:**\n1. Only platform with built-in AI lead discovery\n2. 3x more personalization depth using GPT-4\n3. 40% lower cost for equivalent functionality\n\nProposal updated. Export to PDF?", time: '4:20 PM' },
-      ],
-    },
-    {
-      id: 's4',
-      title: 'Workflow Automation Design',
-      createdAt: 'May 11, 2026',
-      updatedAt: '11:30 AM',
-      pinned: true,
-      unread: 0,
-      tags: ['workflow', 'automation'],
-      model: 'Claude 3 Opus',
-      tokenCount: 3567,
-      messages: [
-        { id: 'm4-1', role: 'user', content: 'Design a lead nurturing workflow that handles new leads from capture through qualification', time: '11:25 AM' },
-        { id: 'm4-2', role: 'assistant', content: "Here's an optimized **Lead Nurturing Workflow** design:\n\n```\n[New Lead Captured]\n     |\n     v\n[AI Score Lead] ──── Score < 50 ──→ [Cold Nurture Track]\n     |                                    |\n   Score >= 50                         [Weekly Digest Email]\n     |                                    |\n     v                                    v\n[Send Welcome Email]              [Re-score in 14 days]\n     |                                    |\n     v                                    |\n[Wait 2 Days]                     Score >= 50?\n     |                              Yes ↙     ↘ No\n[Check Engagement]            [Move to Warm]  [Archive]\n  Opened? |\n  Yes ↙     ↘ No\n  |           |\n  v           v\n[Send Case    [LinkedIn\n Study]       Connect]\n  |           |\n  v           v\n[Schedule     [Wait 3\n Demo Call]    Days]\n              |\n              v\n           [Send\n           Follow-up]\n```\n\n**Key Features:**\n- AI-powered lead scoring at entry point\n- Conditional branching based on engagement\n- Multi-channel touchpoints (email + LinkedIn)\n- Automatic re-scoring for cold leads\n- 5-node workflow with 3 condition branches\n\nWant me to create this workflow in the builder?", time: '11:28 AM', command: '/build-workflow' },
-      ],
-    },
-    {
-      id: 's5',
-      title: 'API Integration Help',
-      createdAt: 'May 10, 2026',
-      updatedAt: '2:15 PM',
-      pinned: false,
-      unread: 0,
-      tags: ['dev', 'api'],
-      model: 'GPT-4 Turbo',
-      tokenCount: 1890,
-      messages: [
-        { id: 'm5-1', role: 'user', content: 'How do I authenticate API requests and list leads using the REST API?', time: '2:10 PM' },
-        { id: 'm5-2', role: 'assistant', content: "Here's a quick guide for **API Authentication & Lead Listing**:\n\n**Step 1: Get Your API Key**\n\nGo to Settings > API Keys and click \"Generate New Key\". Copy the key immediately.\n\n**Step 2: Authenticate Requests**\n\nInclude your API key in the Authorization header:\n\n```javascript\nconst response = await fetch('https://api.visionflow.ai/v1/leads', {\n  headers: {\n    'Authorization': 'Bearer vf_live_sk_abc123def456',\n    'Content-Type': 'application/json'\n  }\n});\n```\n\n**Step 3: List Leads**\n\n```javascript\n// List leads with filters\nconst leads = await fetch(\n  'https://api.visionflow.ai/v1/leads?status=qualified&score_min=75&per_page=25',\n  {\n    headers: {\n      'Authorization': 'Bearer vf_live_sk_abc123def456'\n    }\n  }\n);\n\nconst data = await leads.json();\nconsole.log(data.data); // Array of lead objects\nconsole.log(data.meta);  // Pagination info\n```\n\n**Rate Limits:**\n- Pro plan: 300 requests/min, 100,000/day\n- Enterprise: 1,000 requests/min, unlimited daily\n\nNeed help with a specific endpoint?", time: '2:12 PM' },
-      ],
-    },
-  ]
+  return []
 }
 
 // ---------------------------------------------------------------------------
@@ -328,14 +190,14 @@ function createInitialSessions(): ChatSession[] {
 // ---------------------------------------------------------------------------
 
 const streamingResponses: Record<string, string> = {
-  default: "I've processed your request. Here's what I found:\n\n- **3 high-priority leads** identified in the SaaS vertical\n- **2 follow-ups** due today for warm prospects\n- **Campaign performance** is up 12% this week\n\nWould you like me to take action on any of these items? I can start outreach, schedule follow-ups, or dive deeper into any metric.",
-  '/find-leads': "Searching across LinkedIn, Apollo, and Crunchbase for qualified leads matching your criteria...\n\n**Results Found: 18 matches**\n\n| # | Company | ARR | Hiring For | Score |\n|---|---------|-----|------------|-------|\n| 1 | AcceleRate AI | $3.4M | VP Sales | 92 |\n| 2 | NovaPay Tech | $7.1M | CMO | 88 |\n| 3 | Streamline.io | $2.8M | Growth Lead | 85 |\n| 4 | DataForge | $5.6M | Marketing Dir | 82 |\n| 5 | CloudPeak SaaS | $9.3M | Head of Rev | 79 |\n\nAll leads have been scored and enriched. Want me to start outreach to the top 5?",
-  '/generate-proposal': "Generating a personalized proposal...\n\n**Proposal Ready: Custom AI Sales Package**\n\n**Executive Summary**\nOur AI-powered platform will automate 80% of your lead generation and outreach workflow, reducing manual effort by 35 hours/week while improving conversion rates by 2.8x.\n\n**Recommended Setup:**\n- Lead Scout Agent (24/7 lead discovery)\n- Outreach Pro (AI-personalized sequences)\n- CRM Brain (pipeline analytics)\n\n**Investment:** $199/month (Professional Plan)\n**Expected ROI:** 340% within 6 months\n\nShall I export this as a PDF or schedule a presentation?",
-  '/analyze-pipeline': "Analyzing your current pipeline...\n\n**Pipeline Health Score: 78/100** (Good)\n\n**Stage Breakdown:**\n- New Leads: 47 (23% of pipeline)\n- Contacted: 31 (15%)\n- Qualified: 52 (25%)\n- Proposal: 28 (14%)\n- Negotiation: 18 (9%)\n- Won: 29 (14%)\n\n**Bottleneck Alert:** Contacts are spending 12 days average in the \"Contacted\" stage (industry benchmark: 5 days). Recommend deploying Follow-Up Engine agent.\n\n**Quick Wins:**\n1. 8 leads in Proposal are ready for follow-up\n2. 3 deals in Negotiation need attention this week\n3. Re-engage 12 cold leads with AI-powered sequences\n\nWant me to take action on any of these?",
-  '/run-outreach': "Initiating outreach campaign...\n\n**Campaign Status: Active**\n\n- **Targets:** 10 qualified leads\n- **Sequence:** 5-step multi-channel\n- **Channels:** Email + LinkedIn\n\n**Step 1:** Personalized intro email → Scheduled for Tuesday 10:00 AM\n**Step 2:** LinkedIn connection → +3 days\n**Step 3:** Case study email → +5 days\n**Step 4:** LinkedIn message → +7 days\n**Step 5:** Final CTA email → +10 days\n\nAll emails are AI-personalized using prospect intel. First sends go out at the optimal engagement window. I'll track all interactions and update the CRM automatically.",
-  '/score-leads': "Scoring and prioritizing leads using multi-factor analysis...\n\n**Scoring Complete** — 47 leads evaluated\n\n**Priority Distribution:**\n- 🔥 Hot (90-100): 8 leads → Immediate outreach recommended\n- 🟡 Warm (75-89): 14 leads → Priority follow-up within 24hrs\n- 🔵 Moderate (50-74): 18 leads → Add to nurture sequence\n- ⚪ Cold (0-49): 7 leads → Archive or periodic check-in\n\n**Top 3 Hot Leads:**\n1. **Meridian SaaS** (Score: 96) - $8.2M ARR, Series B, hiring 3 roles\n2. **Apex Analytics** (Score: 94) - $4.7M ARR, actively evaluating tools\n3. **CloudForge** (Score: 91) - $6.1M ARR, CMO just started\n\nShall I start outreach to the hot leads?",
-  '/build-workflow': "Designing your automated workflow...\n\n**Workflow: Smart Lead Processing**\n\n```\nTrigger: New Lead Created\n  → Action: AI Score Lead\n  → Condition: Score >= 75?\n     Yes → Send Personalized Email\n           → Wait 2 Days\n           → Check Engagement\n              Opened → Schedule Demo\n              Not Opened → LinkedIn Connect\n     No → Add to Cold Nurture\n           → Weekly Digest\n           → Re-score after 14 days\n```\n\n**Configuration:**\n- 6 nodes, 2 condition branches\n- Estimated processing time: < 2 minutes per lead\n- AI models: GPT-4 for scoring, GPT-4 Turbo for emails\n\nWant me to create this in the workflow builder?",
-  '/team-report': "Generating team performance report...\n\n**Weekly Team Report** — May 5-12, 2026\n\n**Activity Metrics:**\n- New leads added: 67 (+24% vs last week)\n- Outreach emails sent: 142\n- Meetings booked: 12\n- Deals closed: 4 ($48,200 total value)\n\n**Top Performers:**\n1. Alex Morgan — 3 deals closed, $31,500 pipeline\n2. Sarah Chen — 8 meetings booked, 94% follow-up rate\n3. Mike Johnson — 45 leads contacted, 22% reply rate\n\n**AI Agent Efficiency:**\n- Lead Scout: 89% accuracy, 67 leads discovered\n- Outreach Pro: 31% open rate, 7.2% reply rate\n- CRM Brain: 4 deal predictions, 3 confirmed\n\nFull report ready for export. Download PDF?",
+  default: "I've processed your request. How can I help you further?",
+  '/find-leads': "I'll find leads matching your criteria. Searching across available data sources...\n\nOnce I have results, I'll score and enrich them for you. Would you like me to start outreach to the top matches?",
+  '/generate-proposal': "Generating a personalized proposal based on the information provided...\n\nThe proposal will include recommended setup, pricing, and expected ROI. Shall I export this or schedule a presentation?",
+  '/analyze-pipeline': "Analyzing your current pipeline...\n\nI'll review conversion rates by stage, identify bottlenecks, and suggest actions to accelerate deals. Want me to take action on any findings?",
+  '/run-outreach': "Initiating outreach campaign...\n\nI'll set up a multi-channel sequence with personalized messaging. I'll track all interactions and update the CRM automatically.",
+  '/score-leads': "Scoring and prioritizing leads using multi-factor analysis...\n\nI'll evaluate all leads and categorize them by priority. Shall I start outreach to the top-scoring leads?",
+  '/build-workflow': "Designing your automated workflow...\n\nI'll create a workflow with appropriate triggers, conditions, and actions. Want me to set this up in the workflow builder?",
+  '/team-report': "Generating team performance report...\n\nThe report will include activity metrics, deal progress, and AI agent efficiency. Full report ready for export when complete.",
   '/help': "Here are all available **AI Commands**:\n\n| Command | Description |\n|---------|-------------|\n| `/find-leads` | Search for new qualified leads |\n| `/generate-proposal` | Create a personalized proposal |\n| `/analyze-pipeline` | Pipeline analytics & insights |\n| `/run-outreach` | Start outreach campaigns |\n| `/score-leads` | Score and prioritize leads |\n| `/build-workflow` | Design automated workflows |\n| `/team-report` | Team performance report |\n| `/help` | Show this help message |\n\nYou can also just type naturally and I'll understand your intent. I have access to all your CRM data, agents, workflows, and analytics.",
 }
 
@@ -679,8 +541,10 @@ export function ChatPage() {
   const { toast } = useToast()
 
   // Sessions state
-  const [sessions, setSessions] = useState<ChatSession[]>(createInitialSessions)
-  const [activeSessionId, setActiveSessionId] = useState('s1')
+  const [sessions, setSessions] = useState<ChatSession[]>(() =>
+    chatMessages.length > 0 ? createInitialSessions() : []
+  )
+  const [activeSessionId, setActiveSessionId] = useState<string>('')
   const [sessionSearch, setSessionSearch] = useState('')
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -755,11 +619,12 @@ export function ChatPage() {
   }
 
   // Streaming simulation
-  const simulateStreaming = useCallback((fullText: string, command?: string) => {
+  const simulateStreaming = useCallback((fullText: string, command?: string, targetSessionId?: string) => {
     setIsStreaming(true)
     setStreamingText('')
     let charIndex = 0
     const charsPerTick = 3
+    const sessionId = targetSessionId || activeSessionId
 
     streamIntervalRef.current = setInterval(() => {
       charIndex += charsPerTick
@@ -779,7 +644,7 @@ export function ChatPage() {
 
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === activeSessionId
+            s.id === sessionId
               ? { ...s, messages: [...s.messages, aiMsg], updatedAt: getCurrentTime(), tokenCount: s.tokenCount + Math.ceil(fullText.length / 4) }
               : s
           )
@@ -816,14 +681,35 @@ export function ChatPage() {
       attachments: attachments.length > 0 ? attachments : undefined,
     }
 
-    // Add user message
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeSessionId
-          ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime() }
-          : s
-      )
-    )
+    // Add user message — create a new session if none exists
+    let targetSessionId = activeSessionId
+    setSessions((prev) => {
+      const existing = prev.find((s) => s.id === activeSessionId)
+      if (existing) {
+        return prev.map((s) =>
+          s.id === activeSessionId
+            ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime() }
+            : s
+        )
+      }
+      // No active session — create one on-the-fly
+      const newId = Date.now().toString()
+      targetSessionId = newId
+      const newSession: ChatSession = {
+        id: newId,
+        title: text.length > 40 ? text.slice(0, 40) + '…' : text,
+        createdAt: getCurrentTime(),
+        updatedAt: getCurrentTime(),
+        pinned: false,
+        unread: 0,
+        tags: [],
+        model: AI_MODELS.find((m) => m.id === selectedModel)?.name || 'GPT-4',
+        tokenCount: 0,
+        messages: [userMsg],
+      }
+      setActiveSessionId(newId)
+      return [newSession, ...prev]
+    })
     setInputText('')
     setShowCommands(false)
     setIsTyping(true)
@@ -835,9 +721,9 @@ export function ChatPage() {
     // Show typing indicator, then stream
     setTimeout(() => {
       setIsTyping(false)
-      simulateStreaming(responseText, command)
+      simulateStreaming(responseText, command, targetSessionId)
     }, 800)
-  }, [inputText, isTyping, isStreaming, activeSessionId, simulateStreaming])
+  }, [inputText, isTyping, isStreaming, activeSessionId, simulateStreaming, selectedModel])
 
   // Handle command selection
   const handleCommandSelect = (cmd: AICommand) => {
@@ -1350,6 +1236,15 @@ export function ChatPage() {
         {/* ============================================================ */}
         <ScrollArea ref={scrollRef} className="flex-1 px-4">
           <div className="mx-auto max-w-3xl space-y-4 py-6">
+            {chatMessages.length === 0 && !activeSession?.messages?.length && !isStreaming && !isTyping ? (
+              <EmptyState
+                icon={MessageSquare}
+                title="Start a conversation"
+                description="Ask your AI assistant anything — from finding leads to generating proposals and automating workflows."
+                className="py-12"
+              />
+            ) : (
+            <>
             <AnimatePresence initial={false}>
               {activeSession?.messages.map((msg) => (
                 <motion.div
@@ -1504,6 +1399,8 @@ export function ChatPage() {
             <AnimatePresence>
               {isTyping && <TypingIndicator />}
             </AnimatePresence>
+            </>
+            )}
           </div>
         </ScrollArea>
 
@@ -1545,6 +1442,36 @@ export function ChatPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ============================================================ */}
+        {/* SUGGESTED PROMPTS (visible when no messages)                  */}
+        {/* ============================================================ */}
+        {chatMessages.length === 0 && !activeSession?.messages?.length && (
+          <div className="border-t px-4 pt-3 pb-1 shrink-0">
+            <div className="mx-auto max-w-3xl">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  'Find me new leads',
+                  'Generate a proposal',
+                  'Analyze my pipeline',
+                  'Set up an outreach campaign',
+                ].map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => {
+                      setInputText(prompt)
+                      inputRef.current?.focus()
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                  >
+                    <Sparkles className="size-3" />
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ============================================================ */}
         {/* INPUT AREA                                                    */}
