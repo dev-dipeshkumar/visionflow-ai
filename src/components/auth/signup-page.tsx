@@ -15,17 +15,33 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  ShieldCheck,
-  Sparkles,
   Sun,
   Moon,
+  Building2,
+  User,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 
-export function LoginPage() {
+function getPasswordStrength(password: string): { label: string; color: string; percent: number } {
+  let score = 0
+  if (password.length >= 8) score++
+  if (password.length >= 12) score++
+  if (/[A-Z]/.test(password)) score++
+  if (/[a-z]/.test(password)) score++
+  if (/[0-9]/.test(password)) score++
+  if (/[^A-Za-z0-9]/.test(password)) score++
+
+  if (score <= 2) return { label: 'Weak', color: 'bg-red-500', percent: 25 }
+  if (score <= 3) return { label: 'Fair', color: 'bg-orange-500', percent: 50 }
+  if (score <= 4) return { label: 'Strong', color: 'bg-yellow-500', percent: 75 }
+  return { label: 'Very Strong', color: 'bg-emerald-500', percent: 100 }
+}
+
+export function SignupPage() {
   const { setViewMode, setCurrentUser } = useAppStore()
   const { theme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
@@ -34,53 +50,82 @@ export function LoginPage() {
     () => false
   )
 
+  const [workspaceName, setWorkspaceName] = useState('')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const handleLogin = useCallback(async () => {
+  const passwordStrength = getPasswordStrength(password)
+
+  const handleSignup = useCallback(async () => {
     setError(null)
     setSuccess(null)
 
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password.')
+    if (!workspaceName.trim()) {
+      setError('Please enter a workspace name.')
+      return
+    }
+    if (!fullName.trim()) {
+      setError('Please enter your full name.')
+      return
+    }
+    if (!email.trim()) {
+      setError('Please enter your email address.')
+      return
+    }
+    if (!password.trim()) {
+      setError('Please enter a password.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.')
+      return
+    }
+    if (!agreedToTerms) {
+      setError('You must agree to the terms and conditions.')
       return
     }
 
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), password }),
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password,
+          name: fullName.trim(),
+          workspaceName: workspaceName.trim(),
+        }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Authentication failed. Please try again.')
+        setError(data.error || 'Registration failed. Please try again.')
         setIsLoading(false)
         return
       }
 
-      // Map API response to CurrentUser
       const user: CurrentUser = {
         id: data.user.id,
         email: data.user.email,
-        name: data.user.name || 'User',
-        role: data.user.role,
+        name: data.user.name || fullName.trim(),
+        role: data.user.role || 'owner',
         isTester: data.user.isTester || false,
         department: data.user.department || 'General',
         avatarUrl: data.user.avatarUrl,
+        workspace: workspaceName.trim(),
       }
 
-      setSuccess(`Welcome back, ${user.name}!`)
+      setSuccess('Account created successfully!')
 
-      // Brief delay to show success message, then transition
       setTimeout(() => {
         setCurrentUser(user)
         setViewMode('app')
@@ -90,11 +135,11 @@ export function LoginPage() {
       setError('Network error. Please check your connection and try again.')
       setIsLoading(false)
     }
-  }, [email, password, setCurrentUser, setViewMode])
+  }, [workspaceName, fullName, email, password, agreedToTerms, setCurrentUser, setViewMode])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
-      handleLogin()
+      handleSignup()
     }
   }
 
@@ -126,6 +171,7 @@ export function LoginPage() {
           )}
         </Button>
       </div>
+
       {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-vf-teal/5 blur-3xl" />
@@ -164,15 +210,15 @@ export function LoginPage() {
                 transition={{ delay: 0.2, duration: 0.4 }}
               >
                 <h1 className="text-2xl font-bold tracking-tight">
-                  Welcome back
+                  Create your account
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Sign in to your VisionFlow AI workspace
+                  Start your VisionFlow AI journey
                 </p>
               </motion.div>
             </div>
 
-            {/* Sign In Form */}
+            {/* Signup Form */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -210,6 +256,46 @@ export function LoginPage() {
                 )}
               </AnimatePresence>
 
+              {/* Workspace name field */}
+              <div className="space-y-2">
+                <label htmlFor="workspaceName" className="text-sm font-medium">
+                  Workspace Name
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="workspaceName"
+                    type="text"
+                    placeholder="Acme Inc."
+                    value={workspaceName}
+                    onChange={(e) => { setWorkspaceName(e.target.value); setError(null) }}
+                    onKeyDown={handleKeyDown}
+                    className="pl-10 h-11 bg-background/50"
+                    autoComplete="organization"
+                  />
+                </div>
+              </div>
+
+              {/* Full name field */}
+              <div className="space-y-2">
+                <label htmlFor="fullName" className="text-sm font-medium">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => { setFullName(e.target.value); setError(null) }}
+                    onKeyDown={handleKeyDown}
+                    className="pl-10 h-11 bg-background/50"
+                    autoComplete="name"
+                  />
+                </div>
+              </div>
+
               {/* Email field */}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
@@ -226,36 +312,26 @@ export function LoginPage() {
                     onKeyDown={handleKeyDown}
                     className="pl-10 h-11 bg-background/50"
                     autoComplete="email"
-                    autoFocus
                   />
                 </div>
               </div>
 
               {/* Password field */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-sm font-medium">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('forgot-password')}
-                    className="text-xs text-vf-teal hover:text-vf-teal/80 font-medium transition-colors"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
+                    placeholder="Create a strong password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(null) }}
                     onKeyDown={handleKeyDown}
                     className="pl-10 pr-10 h-11 bg-background/50"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
@@ -266,113 +342,104 @@ export function LoginPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+
+                {/* Password strength indicator */}
+                {password.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Password strength</span>
+                      <span className={`text-xs font-medium ${
+                        passwordStrength.label === 'Weak' ? 'text-red-500' :
+                        passwordStrength.label === 'Fair' ? 'text-orange-500' :
+                        passwordStrength.label === 'Strong' ? 'text-yellow-500' :
+                        'text-emerald-500'
+                      }`}>
+                        {passwordStrength.label}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${passwordStrength.percent}%` }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        className={`h-full rounded-full ${passwordStrength.color}`}
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Sign In button */}
+              {/* Terms agreement */}
+              <div className="flex items-start gap-2.5 pt-1">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => {
+                    setAgreedToTerms(checked === true)
+                    setError(null)
+                  }}
+                  className="mt-0.5"
+                />
+                <label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  I agree to the{' '}
+                  <span className="text-vf-teal hover:text-vf-teal/80 font-medium cursor-pointer">Terms of Service</span>
+                  {' '}and{' '}
+                  <span className="text-vf-teal hover:text-vf-teal/80 font-medium cursor-pointer">Privacy Policy</span>
+                </label>
+              </div>
+
+              {/* Create Account button */}
               <Button
-                onClick={handleLogin}
-                disabled={isLoading || !email.trim() || !password.trim()}
+                onClick={handleSignup}
+                disabled={isLoading || !email.trim() || !password.trim() || !fullName.trim() || !workspaceName.trim() || !agreedToTerms}
                 className="w-full h-11 bg-gradient-to-r from-primary to-vf-teal hover:from-primary/90 hover:to-vf-teal/90 text-white font-medium shadow-lg shadow-primary/20 transition-all duration-200"
               >
                 {isLoading ? (
                   <motion.div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>Creating account...</span>
                   </motion.div>
                 ) : (
                   <motion.div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4" />
-                    <span>Sign In</span>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Create Account</span>
                   </motion.div>
                 )}
               </Button>
             </motion.div>
 
-            {/* Divider */}
-            <div className="relative">
-              <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-                or continue with
-              </span>
-            </div>
-
-            {/* Quick login buttons for demo */}
+            {/* Already have an account */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.4 }}
-              className="space-y-2"
+              className="text-center"
             >
-              <p className="text-xs text-muted-foreground text-center mb-2">
-                Quick demo login
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setViewMode('login')}
+                  className="text-vf-teal hover:text-vf-teal/80 font-medium transition-colors"
+                >
+                  Sign in
+                </button>
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  className="h-9 text-xs"
-                  onClick={() => {
-                    setEmail('alex@visionflow.ai')
-                    setPassword('Admin@VF2026')
-                  }}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-violet-500" />
-                  Admin
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-9 text-xs"
-                  onClick={() => {
-                    setEmail('prince.testing@visionflow.ai')
-                    setPassword('Prince@VF2026')
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                  Tester 1
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-9 text-xs"
-                  onClick={() => {
-                    setEmail('ronak.testing@visionflow.ai')
-                    setPassword('Ronak@VF2026')
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                  Tester 2
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-9 text-xs"
-                  onClick={() => {
-                    setEmail('mehul.testing@visionflow.ai')
-                    setPassword('Mehul@VF2026')
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                  Tester 3
-                </Button>
-              </div>
             </motion.div>
 
             {/* Security notice */}
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground pt-1">
               <Lock className="h-3 w-3" />
-              <span>Secured with bcrypt hashing. Passwords are never stored in plaintext.</span>
+              <span>Secured with bcrypt hashing. Your data is encrypted at rest.</span>
             </div>
 
-            {/* Sign up link */}
-            <div className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setViewMode('signup')}
-                className="font-medium text-vf-teal hover:text-vf-teal/80 transition-colors"
-              >
-                Sign up
-              </button>
-            </div>
-
-            {/* Back to landing */}
+            {/* Back to home */}
             <div className="flex justify-center pt-1">
               <button
                 onClick={() => setViewMode('landing')}

@@ -19,6 +19,9 @@ const DocsPage = lazy(() => import('@/components/docs/docs-page').then(m => ({ d
 const TeamPage = lazy(() => import('@/components/team/team-page').then(m => ({ default: m.TeamPage })))
 const BugsPage = lazy(() => import('@/components/bugs/bugs-page').then(m => ({ default: m.BugsPage })))
 const SettingsPage = lazy(() => import('@/components/settings/settings-page').then(m => ({ default: m.SettingsPage })))
+const BillingPage = lazy(() => import('@/components/billing/billing-page').then(m => ({ default: m.BillingPage })))
+const PricingPage = lazy(() => import('@/components/billing/pricing-page').then(m => ({ default: m.PricingPage })))
+const InvoicesPage = lazy(() => import('@/components/billing/invoices-page').then(m => ({ default: m.InvoicesPage })))
 
 const pageComponents: Record<PageId, React.ComponentType> = {
   dashboard: DashboardPage,
@@ -33,6 +36,9 @@ const pageComponents: Record<PageId, React.ComponentType> = {
   team: TeamPage,
   bugs: BugsPage,
   settings: SettingsPage,
+  billing: BillingPage,
+  pricing: PricingPage,
+  invoices: InvoicesPage,
 }
 
 function PageSkeleton() {

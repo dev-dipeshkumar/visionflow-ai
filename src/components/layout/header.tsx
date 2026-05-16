@@ -84,6 +84,18 @@ const pageInfo: Record<PageId, { title: string; subtitle: string }> = {
     title: 'Settings',
     subtitle: 'Configure your workspace and integrations',
   },
+  billing: {
+    title: 'Billing',
+    subtitle: 'Manage your subscription and payment methods',
+  },
+  pricing: {
+    title: 'Plans & Pricing',
+    subtitle: 'Choose the plan that fits your business needs',
+  },
+  invoices: {
+    title: 'Invoices',
+    subtitle: 'View and download your billing history',
+  },
 }
 
 function getInitials(name: string) {

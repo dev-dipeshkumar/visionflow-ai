@@ -16,6 +16,7 @@ import {
   UserCog,
   Bug,
   Settings,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -51,6 +52,7 @@ const allNavItems: NavItem[] = [
   { label: 'Docs', pageId: 'docs', icon: BookOpen, visibleTo: ['all'] },
   { label: 'Team & Testers', pageId: 'team', icon: UserCog, visibleTo: ['admin'] },
   { label: 'Bug Tracker', pageId: 'bugs', icon: Bug, visibleTo: ['tester'] },
+  { label: 'Billing', pageId: 'billing', icon: CreditCard, visibleTo: ['all'] },
   { label: 'Settings', pageId: 'settings', icon: Settings, visibleTo: ['all'] },
 ]
 

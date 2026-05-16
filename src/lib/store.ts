@@ -13,17 +13,71 @@ export type PageId =
   | 'team'
   | 'bugs'
   | 'settings'
+  | 'billing'
+  | 'invoices'
+  | 'pricing'
 
-export type ViewMode = 'landing' | 'login' | 'app'
+export type ViewMode = 
+  | 'landing' 
+  | 'login' 
+  | 'signup' 
+  | 'forgot-password' 
+  | 'reset-password' 
+  | 'verify-email' 
+  | 'app'
+
+export type SubscriptionPlan = 'free_trial' | 'starter' | 'pro' | 'agency' | 'enterprise'
+
+export type UserRole = 'owner' | 'admin' | 'manager' | 'member' | 'tester'
 
 export interface CurrentUser {
   id: string
   email: string
   name: string
-  role: string
+  role: UserRole
   isTester: boolean
   department: string
   avatarUrl?: string | null
+  plan?: SubscriptionPlan
+  workspace?: string
+  subscriptionStatus?: string
+  emailVerified?: boolean
+  onboardingStatus?: string
+}
+
+// Role permissions map
+export const rolePermissions: Record<UserRole, string[]> = {
+  owner: ['all'],
+  admin: ['manage_users', 'manage_billing', 'manage_integrations', 'manage_agents', 'manage_workflows', 'view_analytics', 'manage_crm', 'manage_outreach', 'manage_projects', 'manage_docs', 'manage_settings'],
+  manager: ['manage_crm', 'manage_outreach', 'manage_projects', 'manage_agents', 'view_analytics', 'manage_docs'],
+  member: ['view_crm', 'view_projects', 'use_chat', 'view_docs', 'manage_own_tasks'],
+  tester: ['view_crm', 'view_projects', 'use_chat', 'view_docs', 'report_bugs'],
+}
+
+// Plan feature map
+export const planFeatures: Record<SubscriptionPlan, string[]> = {
+  free_trial: ['dashboard', 'crm', 'chat', 'docs'],
+  starter: ['dashboard', 'crm', 'chat', 'docs', 'integrations', 'billing'],
+  pro: ['dashboard', 'crm', 'chat', 'docs', 'integrations', 'billing', 'agents', 'outreach', 'workflows', 'analytics', 'team'],
+  agency: ['dashboard', 'crm', 'chat', 'docs', 'integrations', 'billing', 'agents', 'outreach', 'workflows', 'analytics', 'team', 'api_access', 'priority_support'],
+  enterprise: ['dashboard', 'crm', 'chat', 'docs', 'integrations', 'billing', 'agents', 'outreach', 'workflows', 'analytics', 'team', 'api_access', 'priority_support', 'white_label', 'advanced_security'],
+}
+
+export const planLimits: Record<SubscriptionPlan, { maxLeads: number; maxAgents: number; label: string; price: number }> = {
+  free_trial: { maxLeads: 50, maxAgents: 2, label: 'Free Trial', price: 0 },
+  starter: { maxLeads: 500, maxAgents: 5, label: 'Starter', price: 29 },
+  pro: { maxLeads: 5000, maxAgents: 20, label: 'Pro', price: 79 },
+  agency: { maxLeads: -1, maxAgents: -1, label: 'Agency', price: 199 },
+  enterprise: { maxLeads: -1, maxAgents: -1, label: 'Enterprise', price: 499 },
+}
+
+export function hasPermission(role: UserRole, permission: string): boolean {
+  if (rolePermissions[role]?.includes('all')) return true
+  return rolePermissions[role]?.includes(permission) ?? false
+}
+
+export function hasPlanFeature(plan: SubscriptionPlan, feature: string): boolean {
+  return planFeatures[plan]?.includes(feature) ?? false
 }
 
 interface AppState {

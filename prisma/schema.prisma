@@ -8,42 +8,91 @@ datasource db {
 }
 
 model Tenant {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique
-  industry     String?
-  plan         String   @default("starter")
-  settings     String?
-  logoUrl      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  users        User[]
-  leads        Lead[]
-  contacts     Contact[]
-  campaigns    Campaign[]
-  workflows    Workflow[]
-  projects     Project[]
-  agents       AIAgent[]
-  integrations Integration[]
-  invoices     Invoice[]
-  templates    Template[]
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  industry           String?
+  plan               String   @default("starter")
+  settings           String?
+  logoUrl            String?
+  subscriptionStatus String   @default("trial") // trial | active | past_due | canceled | unpaid
+  subscriptionId     String?  // Stripe subscription ID
+  trialEndsAt        DateTime?
+  billingEmail       String?
+  ownerId            String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  users              User[]
+  leads              Lead[]
+  contacts           Contact[]
+  campaigns          Campaign[]
+  workflows          Workflow[]
+  projects           Project[]
+  agents             AIAgent[]
+  integrations       Integration[]
+  invoices           Invoice[]
+  templates          Template[]
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  avatarUrl    String?
-  role         String   @default("member")
-  passwordHash String?
-  isTester     Boolean  @default(false)
-  department   String?  @default("General")
-  tenantId     String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  activities   Activity[]
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  avatarUrl             String?
+  role                  String    @default("member")
+  passwordHash          String?
+  isTester              Boolean   @default(false)
+  department            String?   @default("General")
+  tenantId              String
+  isActive              Boolean   @default(true)
+  subscriptionStatus    String    @default("trial") // trial | active | past_due | canceled | unpaid
+  trialEndsAt           DateTime?
+  emailVerified         Boolean   @default(false)
+  lockedUntil           DateTime?
+  failedLoginAttempts   Int       @default(0)
+  lastLoginAt           DateTime?
+  onboardingStatus      String    @default("pending") // pending | in_progress | completed | skipped
+  resetToken            String?   @unique
+  resetTokenExpiry      DateTime?
+  verifyToken           String?   @unique
+  verifyTokenExpiry     DateTime?
+  rememberMe            Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
+  activities            Activity[]
+  passwordResetTokens   PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  sessions              Session[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  userId    String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  userId    String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Lead {
