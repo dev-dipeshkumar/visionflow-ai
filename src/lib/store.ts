@@ -24,6 +24,18 @@ export interface CurrentUser {
   isTester: boolean
   department: string
   avatarUrl?: string | null
+  /** Workspace ID for data isolation — each user gets their own workspace */
+  workspaceId?: string
+}
+
+/** Tracks which onboarding steps a new user has completed */
+export interface OnboardingProgress {
+  connectedCRM: boolean
+  createdFirstWorkflow: boolean
+  addedFirstLead: boolean
+  createdAIAgent: boolean
+  launchedFirstCampaign: boolean
+  completedProfile: boolean
 }
 
 interface AppState {
@@ -44,6 +56,21 @@ interface AppState {
   currentUser: CurrentUser | null
   setCurrentUser: (user: CurrentUser | null) => void
   signOut: () => void
+  /** Onboarding progress — resets for each new user */
+  onboarding: OnboardingProgress
+  setOnboarding: (progress: Partial<OnboardingProgress>) => void
+  /** Whether the onboarding wizard should auto-launch */
+  showOnboarding: boolean
+  setShowOnboarding: (show: boolean) => void
+}
+
+const defaultOnboarding: OnboardingProgress = {
+  connectedCRM: false,
+  createdFirstWorkflow: false,
+  addedFirstLead: false,
+  createdAIAgent: false,
+  launchedFirstCampaign: false,
+  completedProfile: false,
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -59,9 +86,13 @@ export const useAppStore = create<AppState>((set) => ({
   setCommandOpen: (open) => set({ commandOpen: open }),
   chatOpen: false,
   setChatOpen: (open) => set({ chatOpen: open }),
-  notifications: 7,
+  notifications: 0,
   setNotifications: (n) => set({ notifications: n }),
   currentUser: null,
   setCurrentUser: (user) => set({ currentUser: user }),
-  signOut: () => set({ currentUser: null, viewMode: 'login', activePage: 'dashboard' }),
+  signOut: () => set({ currentUser: null, viewMode: 'login', activePage: 'dashboard', onboarding: defaultOnboarding, showOnboarding: false }),
+  onboarding: defaultOnboarding,
+  setOnboarding: (progress) => set((state) => ({ onboarding: { ...state.onboarding, ...progress } })),
+  showOnboarding: false,
+  setShowOnboarding: (show) => set({ showOnboarding: show }),
 }))

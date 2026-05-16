@@ -81,6 +81,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { PremiumEmptyState } from '@/components/shared/premium-empty-state'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,55 +148,49 @@ interface AICommand {
 }
 
 // ---------------------------------------------------------------------------
-// Data
+// Config (not mock data — UI configuration)
 // ---------------------------------------------------------------------------
 
 const AI_MODELS = [
   { id: 'gpt4', name: 'GPT-4', badge: 'Most Capable' },
-  { id: 'gpt4-turbo', name: 'GPT-4 Turbo', badge: 'Fast' },
-  { id: 'claude-3', name: 'Claude 3 Opus', badge: 'Reasoning' },
 ]
 
 const promptTemplates: PromptTemplate[] = [
   {
-    id: 'pt1', name: 'Find Leads', description: 'Search for qualified leads matching your ICP',
-    prompt: 'Find me qualified leads in the SaaS vertical with $1M-$10M revenue that are actively hiring marketing roles. Score and enrich the results.',
-    icon: Search, category: 'sales', color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    id: 'pt1',
+    name: 'Find Leads',
+    description: 'Search for qualified leads matching your ICP',
+    prompt: 'Find me qualified leads matching my ideal customer profile.',
+    icon: Search,
+    category: 'sales',
+    color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   },
   {
-    id: 'pt2', name: 'Generate Proposal', description: 'Create a personalized proposal for a prospect',
-    prompt: 'Generate a personalized proposal for a mid-market SaaS prospect. Include pricing tiers, implementation timeline, and ROI projections.',
-    icon: FileText, category: 'sales', color: 'bg-vf-teal/15 text-vf-teal',
+    id: 'pt2',
+    name: 'Analyze Pipeline',
+    description: 'Get insights on your current pipeline health',
+    prompt: 'Analyze my current sales pipeline and identify bottlenecks.',
+    icon: BarChart3,
+    category: 'analytics',
+    color: 'bg-vf-cyan/15 text-vf-cyan',
   },
   {
-    id: 'pt3', name: 'Analyze Pipeline', description: 'Get insights on your current pipeline health',
-    prompt: 'Analyze my current sales pipeline. Show conversion rates by stage, identify bottlenecks, and suggest actions to accelerate deals.',
-    icon: BarChart3, category: 'analytics', color: 'bg-vf-cyan/15 text-vf-cyan',
+    id: 'pt3',
+    name: 'Generate Proposal',
+    description: 'Create a personalized proposal for a prospect',
+    prompt: 'Generate a personalized proposal for a prospect.',
+    icon: FileText,
+    category: 'sales',
+    color: 'bg-vf-teal/15 text-vf-teal',
   },
   {
-    id: 'pt4', name: 'Draft Email Sequence', description: 'Create a multi-step outreach email sequence',
-    prompt: 'Create a 5-step email outreach sequence for cold prospects in the fintech industry. Personalize each step with relevant pain points.',
-    icon: Zap, category: 'marketing', color: 'bg-vf-amber/15 text-vf-amber',
-  },
-  {
-    id: 'pt5', name: 'Score & Prioritize', description: 'Score leads and prioritize outreach targets',
-    prompt: 'Score all uncontacted leads in my pipeline using firmographic fit, behavioral signals, and intent data. Prioritize the top 20 for immediate outreach.',
-    icon: Target, category: 'sales', color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-  },
-  {
-    id: 'pt6', name: 'Build Workflow', description: 'Design an automated workflow for a process',
-    prompt: 'Design an automated lead nurturing workflow that handles new leads from capture through qualification, with AI-powered follow-ups and scoring.',
-    icon: Workflow, category: 'dev', color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
-  },
-  {
-    id: 'pt7', name: 'Team Report', description: 'Generate a team performance report',
-    prompt: 'Generate a weekly team performance report showing activity metrics, deal progress, pipeline changes, and AI agent efficiency.',
-    icon: Users, category: 'analytics', color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
-  },
-  {
-    id: 'pt8', name: 'Competitor Analysis', description: 'Research competitors and market positioning',
-    prompt: 'Analyze our top 5 competitors in the AI sales automation space. Compare features, pricing, market positioning, and identify opportunities.',
-    icon: Lightbulb, category: 'marketing', color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+    id: 'pt4',
+    name: 'Create Workflow',
+    description: 'Design an automated workflow for a process',
+    prompt: 'Design an automated workflow for lead nurturing.',
+    icon: Workflow,
+    category: 'dev',
+    color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
   },
 ]
 
@@ -204,140 +199,8 @@ const aiCommands: AICommand[] = [
   { name: '/generate-proposal', description: 'Create a proposal', icon: FileText, preview: 'Generating proposal...' },
   { name: '/analyze-pipeline', description: 'Pipeline analytics', icon: BarChart3, preview: 'Analyzing pipeline...' },
   { name: '/run-outreach', description: 'Start outreach campaign', icon: Zap, preview: 'Starting outreach...' },
-  { name: '/score-leads', description: 'Score and prioritize', icon: Target, preview: 'Scoring leads...' },
-  { name: '/build-workflow', description: 'Design a workflow', icon: Workflow, preview: 'Building workflow...' },
-  { name: '/team-report', description: 'Team performance report', icon: Users, preview: 'Generating report...' },
   { name: '/help', description: 'Show all commands', icon: Command, preview: 'Loading help...' },
 ]
-
-const aiMemoryItems: AIMemoryItem[] = [
-  { id: 'm1', key: 'Company Size', value: 'Mid-market (50-500 employees)', source: 'conversation', updatedAt: '2 hours ago' },
-  { id: 'm2', key: 'Target Industry', value: 'SaaS, Fintech, HealthTech', source: 'user-input', updatedAt: '1 day ago' },
-  { id: 'm3', key: 'Revenue Range', value: '$1M - $10M ARR', source: 'conversation', updatedAt: '3 days ago' },
-  { id: 'm4', key: 'Preferred Channels', value: 'Email, LinkedIn', source: 'conversation', updatedAt: '5 days ago' },
-  { id: 'm5', key: 'Sales Cycle', value: '30-60 days average', source: 'system', updatedAt: '1 week ago' },
-  { id: 'm6', key: 'Key Pain Points', value: 'Manual lead research, slow follow-ups', source: 'conversation', updatedAt: '1 week ago' },
-]
-
-const activeAgents = [
-  { name: 'Lead Scout', status: 'active' as const, color: 'bg-emerald-500' },
-  { name: 'Outreach Pro', status: 'active' as const, color: 'bg-vf-teal' },
-  { name: 'CRM Brain', status: 'active' as const, color: 'bg-vf-cyan' },
-  { name: 'Delivery Agent', status: 'paused' as const, color: 'bg-vf-amber' },
-]
-
-const recentActivity = [
-  { text: 'Lead Scout found 12 new leads', time: '2 min ago', type: 'agent' as const },
-  { text: 'Outreach Pro sent 8 emails', time: '5 min ago', type: 'agent' as const },
-  { text: 'CRM Brain enriched 4 contacts', time: '12 min ago', type: 'agent' as const },
-  { text: 'Proposal generated for TechCorp', time: '28 min ago', type: 'action' as const },
-  { text: 'Workflow "Lead Nurture" completed', time: '1 hr ago', type: 'workflow' as const },
-]
-
-// ---------------------------------------------------------------------------
-// Seed chat sessions
-// ---------------------------------------------------------------------------
-
-function createInitialSessions(): ChatSession[] {
-  return [
-    {
-      id: 's1',
-      title: 'SaaS Lead Generation Strategy',
-      createdAt: 'Today, 10:00 AM',
-      updatedAt: '10:05 AM',
-      pinned: true,
-      unread: 0,
-      tags: ['sales', 'leads'],
-      model: 'GPT-4',
-      tokenCount: 2847,
-      messages: [
-        { id: 'm1-1', role: 'assistant', content: "Hello! I'm your VisionFlow AI assistant. I can help you manage leads, run campaigns, generate proposals, and automate your entire business workflow. What would you like to do?", time: '10:00 AM' },
-        { id: 'm1-2', role: 'user', content: 'Find me 20 new SaaS leads in the $1M-$10M revenue range that are actively hiring marketing roles', time: '10:01 AM' },
-        { id: 'm1-3', role: 'assistant', content: "I've deployed the **Lead Scout** agent to search across LinkedIn, Apollo, and Crunchbase. Found **23 matches**! Here are the top leads:\n\n1. **TechVista Labs** - $4.2M ARR, hiring Head of Growth\n2. **CloudSync Pro** - $7.8M ARR, hiring VP Marketing\n3. **DataPulse** - $2.1M ARR, hiring Marketing Director\n4. **FlowMetrics** - $5.5M ARR, hiring CMO\n5. **NexGen CRM** - $9.2M ARR, hiring Growth Lead\n\nI've scored and enriched all 23 leads. Want me to start personalized outreach to the top 10?", time: '10:02 AM', command: '/find-leads' },
-        { id: 'm1-4', role: 'user', content: 'Yes, start outreach to the top 10 with our SaaS decision maker template', time: '10:03 AM' },
-        { id: 'm1-5', role: 'assistant', content: "**Outreach Pro** agent activated! I've:\n\n- Customized 10 hyper-personalized emails using prospect intel\n- Scheduled sends for optimal engagement windows\n- Set up 5-step follow-up sequences\n- Added all contacts to the CRM pipeline\n\nFirst emails go out at 9:15 AM tomorrow. I'll track opens, clicks, and replies automatically. Want me to set up LinkedIn connection requests too?", time: '10:04 AM', command: '/run-outreach' },
-      ],
-    },
-    {
-      id: 's2',
-      title: 'Campaign Performance Analysis',
-      createdAt: 'Yesterday, 3:30 PM',
-      updatedAt: '3:45 PM',
-      pinned: false,
-      unread: 2,
-      tags: ['analytics', 'campaigns'],
-      model: 'GPT-4 Turbo',
-      tokenCount: 1523,
-      messages: [
-        { id: 'm2-1', role: 'user', content: 'How did our Q2 outreach campaigns perform compared to Q1?', time: '3:30 PM' },
-        { id: 'm2-2', role: 'assistant', content: "Here's your **Q2 vs Q1 Campaign Performance** analysis:\n\n| Metric | Q1 | Q2 | Change |\n|--------|----|----|--------|\n| Emails Sent | 1,247 | 1,892 | +51.7% |\n| Open Rate | 23.4% | 31.2% | +7.8pp |\n| Reply Rate | 4.1% | 6.8% | +2.7pp |\n| Meetings Booked | 18 | 34 | +88.9% |\n| Deals Closed | 3 | 7 | +133.3% |\n\n**Key Insights:**\n- AI-personalized subject lines boosted open rates by 33%\n- Multi-channel sequences outperformed email-only by 2.4x\n- Best performing time slot: Tuesday 10:00 AM - 11:30 AM\n\nShall I create an optimized Q3 strategy based on these insights?", time: '3:32 PM', command: '/analyze-pipeline' },
-      ],
-    },
-    {
-      id: 's3',
-      title: 'Proposal for TechCorp Deal',
-      createdAt: 'May 12, 2026',
-      updatedAt: '4:20 PM',
-      pinned: false,
-      unread: 0,
-      tags: ['sales', 'proposal'],
-      model: 'GPT-4',
-      tokenCount: 4210,
-      messages: [
-        { id: 'm3-1', role: 'user', content: 'Generate a proposal for TechCorp - they are a $5M ARR SaaS company looking for lead generation and CRM automation', time: '4:15 PM' },
-        { id: 'm3-2', role: 'assistant', content: "I've generated a customized proposal for TechCorp. Here's the summary:\n\n**Proposal: VisionFlow AI for TechCorp**\n\n**Executive Summary**\nTechCorp's current manual lead generation process costs approximately $8,400/month in sales rep time. VisionFlow AI can automate 80% of this workflow while improving lead quality by 3.2x.\n\n**Recommended Package: Professional Plan**\n- Lead Scout Agent: Unlimited lead discovery\n- Outreach Pro: Multi-channel sequencing\n- CRM Brain: Pipeline analytics & predictions\n- 10 team member seats\n\n**Pricing:** $199/month (annual) or $249/month (monthly)\n**Implementation:** 2-week onboarding with dedicated CSM\n**ROI Projection:** 340% within 6 months\n\nShall I export this as a PDF or schedule a demo call?", time: '4:17 PM', command: '/generate-proposal' },
-        { id: 'm3-3', role: 'user', content: 'Add a competitive comparison section showing how we stack up against Outreach.io and Salesloft', time: '4:19 PM' },
-        { id: 'm3-4', role: 'assistant', content: "Done! I've added a competitive comparison section:\n\n**VisionFlow AI vs. Competitors**\n\n| Feature | VisionFlow AI | Outreach.io | Salesloft |\n|---------|---------------|-------------|-----------|\n| AI Lead Discovery | Included | Add-on ($99/mo) | Not available |\n| Multi-Channel | Email + LinkedIn + SMS | Email + LinkedIn | Email only |\n| AI Personalization | GPT-4 powered | Basic templates | Basic templates |\n| CRM Integration | Native 2-way | Native | API only |\n| Pipeline Analytics | AI-powered | Basic reporting | Basic reporting |\n| Starting Price | $199/mo | $300/mo | $250/mo |\n\n**Our Advantages:**\n1. Only platform with built-in AI lead discovery\n2. 3x more personalization depth using GPT-4\n3. 40% lower cost for equivalent functionality\n\nProposal updated. Export to PDF?", time: '4:20 PM' },
-      ],
-    },
-    {
-      id: 's4',
-      title: 'Workflow Automation Design',
-      createdAt: 'May 11, 2026',
-      updatedAt: '11:30 AM',
-      pinned: true,
-      unread: 0,
-      tags: ['workflow', 'automation'],
-      model: 'Claude 3 Opus',
-      tokenCount: 3567,
-      messages: [
-        { id: 'm4-1', role: 'user', content: 'Design a lead nurturing workflow that handles new leads from capture through qualification', time: '11:25 AM' },
-        { id: 'm4-2', role: 'assistant', content: "Here's an optimized **Lead Nurturing Workflow** design:\n\n```\n[New Lead Captured]\n     |\n     v\n[AI Score Lead] ──── Score < 50 ──→ [Cold Nurture Track]\n     |                                    |\n   Score >= 50                         [Weekly Digest Email]\n     |                                    |\n     v                                    v\n[Send Welcome Email]              [Re-score in 14 days]\n     |                                    |\n     v                                    |\n[Wait 2 Days]                     Score >= 50?\n     |                              Yes ↙     ↘ No\n[Check Engagement]            [Move to Warm]  [Archive]\n  Opened? |\n  Yes ↙     ↘ No\n  |           |\n  v           v\n[Send Case    [LinkedIn\n Study]       Connect]\n  |           |\n  v           v\n[Schedule     [Wait 3\n Demo Call]    Days]\n              |\n              v\n           [Send\n           Follow-up]\n```\n\n**Key Features:**\n- AI-powered lead scoring at entry point\n- Conditional branching based on engagement\n- Multi-channel touchpoints (email + LinkedIn)\n- Automatic re-scoring for cold leads\n- 5-node workflow with 3 condition branches\n\nWant me to create this workflow in the builder?", time: '11:28 AM', command: '/build-workflow' },
-      ],
-    },
-    {
-      id: 's5',
-      title: 'API Integration Help',
-      createdAt: 'May 10, 2026',
-      updatedAt: '2:15 PM',
-      pinned: false,
-      unread: 0,
-      tags: ['dev', 'api'],
-      model: 'GPT-4 Turbo',
-      tokenCount: 1890,
-      messages: [
-        { id: 'm5-1', role: 'user', content: 'How do I authenticate API requests and list leads using the REST API?', time: '2:10 PM' },
-        { id: 'm5-2', role: 'assistant', content: "Here's a quick guide for **API Authentication & Lead Listing**:\n\n**Step 1: Get Your API Key**\n\nGo to Settings > API Keys and click \"Generate New Key\". Copy the key immediately.\n\n**Step 2: Authenticate Requests**\n\nInclude your API key in the Authorization header:\n\n```javascript\nconst response = await fetch('https://api.visionflow.ai/v1/leads', {\n  headers: {\n    'Authorization': 'Bearer vf_live_sk_abc123def456',\n    'Content-Type': 'application/json'\n  }\n});\n```\n\n**Step 3: List Leads**\n\n```javascript\n// List leads with filters\nconst leads = await fetch(\n  'https://api.visionflow.ai/v1/leads?status=qualified&score_min=75&per_page=25',\n  {\n    headers: {\n      'Authorization': 'Bearer vf_live_sk_abc123def456'\n    }\n  }\n);\n\nconst data = await leads.json();\nconsole.log(data.data); // Array of lead objects\nconsole.log(data.meta);  // Pagination info\n```\n\n**Rate Limits:**\n- Pro plan: 300 requests/min, 100,000/day\n- Enterprise: 1,000 requests/min, unlimited daily\n\nNeed help with a specific endpoint?", time: '2:12 PM' },
-      ],
-    },
-  ]
-}
-
-// ---------------------------------------------------------------------------
-// Mock AI streaming responses
-// ---------------------------------------------------------------------------
-
-const streamingResponses: Record<string, string> = {
-  default: "I've processed your request. Here's what I found:\n\n- **3 high-priority leads** identified in the SaaS vertical\n- **2 follow-ups** due today for warm prospects\n- **Campaign performance** is up 12% this week\n\nWould you like me to take action on any of these items? I can start outreach, schedule follow-ups, or dive deeper into any metric.",
-  '/find-leads': "Searching across LinkedIn, Apollo, and Crunchbase for qualified leads matching your criteria...\n\n**Results Found: 18 matches**\n\n| # | Company | ARR | Hiring For | Score |\n|---|---------|-----|------------|-------|\n| 1 | AcceleRate AI | $3.4M | VP Sales | 92 |\n| 2 | NovaPay Tech | $7.1M | CMO | 88 |\n| 3 | Streamline.io | $2.8M | Growth Lead | 85 |\n| 4 | DataForge | $5.6M | Marketing Dir | 82 |\n| 5 | CloudPeak SaaS | $9.3M | Head of Rev | 79 |\n\nAll leads have been scored and enriched. Want me to start outreach to the top 5?",
-  '/generate-proposal': "Generating a personalized proposal...\n\n**Proposal Ready: Custom AI Sales Package**\n\n**Executive Summary**\nOur AI-powered platform will automate 80% of your lead generation and outreach workflow, reducing manual effort by 35 hours/week while improving conversion rates by 2.8x.\n\n**Recommended Setup:**\n- Lead Scout Agent (24/7 lead discovery)\n- Outreach Pro (AI-personalized sequences)\n- CRM Brain (pipeline analytics)\n\n**Investment:** $199/month (Professional Plan)\n**Expected ROI:** 340% within 6 months\n\nShall I export this as a PDF or schedule a presentation?",
-  '/analyze-pipeline': "Analyzing your current pipeline...\n\n**Pipeline Health Score: 78/100** (Good)\n\n**Stage Breakdown:**\n- New Leads: 47 (23% of pipeline)\n- Contacted: 31 (15%)\n- Qualified: 52 (25%)\n- Proposal: 28 (14%)\n- Negotiation: 18 (9%)\n- Won: 29 (14%)\n\n**Bottleneck Alert:** Contacts are spending 12 days average in the \"Contacted\" stage (industry benchmark: 5 days). Recommend deploying Follow-Up Engine agent.\n\n**Quick Wins:**\n1. 8 leads in Proposal are ready for follow-up\n2. 3 deals in Negotiation need attention this week\n3. Re-engage 12 cold leads with AI-powered sequences\n\nWant me to take action on any of these?",
-  '/run-outreach': "Initiating outreach campaign...\n\n**Campaign Status: Active**\n\n- **Targets:** 10 qualified leads\n- **Sequence:** 5-step multi-channel\n- **Channels:** Email + LinkedIn\n\n**Step 1:** Personalized intro email → Scheduled for Tuesday 10:00 AM\n**Step 2:** LinkedIn connection → +3 days\n**Step 3:** Case study email → +5 days\n**Step 4:** LinkedIn message → +7 days\n**Step 5:** Final CTA email → +10 days\n\nAll emails are AI-personalized using prospect intel. First sends go out at the optimal engagement window. I'll track all interactions and update the CRM automatically.",
-  '/score-leads': "Scoring and prioritizing leads using multi-factor analysis...\n\n**Scoring Complete** — 47 leads evaluated\n\n**Priority Distribution:**\n- 🔥 Hot (90-100): 8 leads → Immediate outreach recommended\n- 🟡 Warm (75-89): 14 leads → Priority follow-up within 24hrs\n- 🔵 Moderate (50-74): 18 leads → Add to nurture sequence\n- ⚪ Cold (0-49): 7 leads → Archive or periodic check-in\n\n**Top 3 Hot Leads:**\n1. **Meridian SaaS** (Score: 96) - $8.2M ARR, Series B, hiring 3 roles\n2. **Apex Analytics** (Score: 94) - $4.7M ARR, actively evaluating tools\n3. **CloudForge** (Score: 91) - $6.1M ARR, CMO just started\n\nShall I start outreach to the hot leads?",
-  '/build-workflow': "Designing your automated workflow...\n\n**Workflow: Smart Lead Processing**\n\n```\nTrigger: New Lead Created\n  → Action: AI Score Lead\n  → Condition: Score >= 75?\n     Yes → Send Personalized Email\n           → Wait 2 Days\n           → Check Engagement\n              Opened → Schedule Demo\n              Not Opened → LinkedIn Connect\n     No → Add to Cold Nurture\n           → Weekly Digest\n           → Re-score after 14 days\n```\n\n**Configuration:**\n- 6 nodes, 2 condition branches\n- Estimated processing time: < 2 minutes per lead\n- AI models: GPT-4 for scoring, GPT-4 Turbo for emails\n\nWant me to create this in the workflow builder?",
-  '/team-report': "Generating team performance report...\n\n**Weekly Team Report** — May 5-12, 2026\n\n**Activity Metrics:**\n- New leads added: 67 (+24% vs last week)\n- Outreach emails sent: 142\n- Meetings booked: 12\n- Deals closed: 4 ($48,200 total value)\n\n**Top Performers:**\n1. Alex Morgan — 3 deals closed, $31,500 pipeline\n2. Sarah Chen — 8 meetings booked, 94% follow-up rate\n3. Mike Johnson — 45 leads contacted, 22% reply rate\n\n**AI Agent Efficiency:**\n- Lead Scout: 89% accuracy, 67 leads discovered\n- Outreach Pro: 31% open rate, 7.2% reply rate\n- CRM Brain: 4 deal predictions, 3 confirmed\n\nFull report ready for export. Download PDF?",
-  '/help': "Here are all available **AI Commands**:\n\n| Command | Description |\n|---------|-------------|\n| `/find-leads` | Search for new qualified leads |\n| `/generate-proposal` | Create a personalized proposal |\n| `/analyze-pipeline` | Pipeline analytics & insights |\n| `/run-outreach` | Start outreach campaigns |\n| `/score-leads` | Score and prioritize leads |\n| `/build-workflow` | Design automated workflows |\n| `/team-report` | Team performance report |\n| `/help` | Show this help message |\n\nYou can also just type naturally and I'll understand your intent. I have access to all your CRM data, agents, workflows, and analytics.",
-}
 
 // ---------------------------------------------------------------------------
 // Markdown renderer (simple but effective)
@@ -412,7 +275,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
     if (line.startsWith('- ')) {
       result.push(
         <div key={key++} className="flex gap-2 ml-2 my-0.5">
-          <span className="text-muted-foreground shrink-0">•</span>
+          <span className="text-muted-foreground shrink-0">&#8226;</span>
           <span className="text-foreground">{renderInline(line.slice(2))}</span>
         </div>
       )
@@ -679,8 +542,8 @@ export function ChatPage() {
   const { toast } = useToast()
 
   // Sessions state
-  const [sessions, setSessions] = useState<ChatSession[]>(createInitialSessions)
-  const [activeSessionId, setActiveSessionId] = useState('s1')
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [sessionSearch, setSessionSearch] = useState('')
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -712,7 +575,7 @@ export function ChatPage() {
 
   // Active session
   const activeSession = useMemo(
-    () => sessions.find((s) => s.id === activeSessionId) || sessions[0],
+    () => sessions.find((s) => s.id === activeSessionId) ?? null,
     [sessions, activeSessionId]
   )
 
@@ -726,7 +589,7 @@ export function ChatPage() {
 
   // Simulate initial loading
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1200)
+    const t = setTimeout(() => setLoading(false), 800)
     return () => clearTimeout(t)
   }, [])
 
@@ -754,8 +617,29 @@ export function ChatPage() {
     return `${h}:${minutes} ${ampm}`
   }
 
+  // Create a new session
+  const createSession = useCallback((initialPrompt?: string): string => {
+    const id = `s-${Date.now()}`
+    const time = getCurrentTime()
+    const newSession: ChatSession = {
+      id,
+      title: initialPrompt ? initialPrompt.slice(0, 40) + (initialPrompt.length > 40 ? '...' : '') : 'New Chat',
+      messages: [],
+      createdAt: time,
+      updatedAt: time,
+      pinned: false,
+      unread: 0,
+      tags: [],
+      model: AI_MODELS.find(m => m.id === selectedModel)?.name ?? 'GPT-4',
+      tokenCount: 0,
+    }
+    setSessions((prev) => [newSession, ...prev])
+    setActiveSessionId(id)
+    return id
+  }, [selectedModel])
+
   // Streaming simulation
-  const simulateStreaming = useCallback((fullText: string, command?: string) => {
+  const simulateStreaming = useCallback((fullText: string, sessionId: string, command?: string) => {
     setIsStreaming(true)
     setStreamingText('')
     let charIndex = 0
@@ -779,7 +663,7 @@ export function ChatPage() {
 
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === activeSessionId
+            s.id === sessionId
               ? { ...s, messages: [...s.messages, aiMsg], updatedAt: getCurrentTime(), tokenCount: s.tokenCount + Math.ceil(fullText.length / 4) }
               : s
           )
@@ -788,39 +672,61 @@ export function ChatPage() {
         setStreamingText(fullText.slice(0, charIndex))
       }
     }, 20)
-  }, [activeSessionId])
+  }, [])
+
+  // Generate a simple AI response
+  const generateResponse = useCallback((userText: string, command?: string): string => {
+    if (command === '/help') {
+      return "Here are all available **AI Commands**:\n\n| Command | Description |\n|---------|-------------|\n| `/find-leads` | Search for new qualified leads |\n| `/generate-proposal` | Create a personalized proposal |\n| `/analyze-pipeline` | Pipeline analytics & insights |\n| `/run-outreach` | Start outreach campaigns |\n| `/help` | Show this help message |\n\nYou can also just type naturally and I'll do my best to help."
+    }
+    if (command === '/find-leads') {
+      return "I'm ready to help you find leads! However, no lead data has been set up yet. Once you add leads to your pipeline, I'll be able to search, score, and enrich them for you.\n\nIn the meantime, you can:\n- Add leads manually in the Leads section\n- Import leads from a CSV file\n- Connect an integration to sync leads automatically\n\nWould you like me to help with any of these?"
+    }
+    if (command === '/generate-proposal') {
+      return "I'd love to generate a proposal for you! To create a personalized proposal, I'll need some information:\n\n- **Prospect name** and company\n- **Deal value** or pricing tier\n- **Services** to include\n- **Timeline** for delivery\n\nPlease provide these details and I'll create a professional proposal document."
+    }
+    if (command === '/analyze-pipeline') {
+      return "I'm ready to analyze your pipeline! Currently, there's no pipeline data available. As you start adding leads and deals, I'll be able to:\n\n- Show conversion rates by stage\n- Identify bottlenecks\n- Suggest actions to accelerate deals\n- Track pipeline velocity\n\nStart by adding some leads and moving them through your pipeline stages."
+    }
+    if (command === '/run-outreach') {
+      return "Outreach campaigns are ready to go once you have leads in your pipeline. To set up an outreach campaign, I'll need:\n\n- **Target leads** (from your pipeline)\n- **Channel** (email, LinkedIn, or multi-channel)\n- **Sequence steps** (how many touchpoints)\n- **Messaging** (tone and key points)\n\nAdd some leads first, then I can help you craft and send personalized outreach sequences."
+    }
+    // Default response
+    return `Thanks for your message! I'm your VisionFlow AI assistant. I can help you with:\n\n- **Finding leads** — search and score prospects\n- **Generating proposals** — create personalized documents\n- **Analyzing your pipeline** — identify bottlenecks and opportunities\n- **Running outreach** — multi-channel campaigns\n\nTo get started, try using one of the slash commands (type \`/\` to see them) or simply describe what you need.`
+  }, [])
 
   // Send message handler
   const handleSend = useCallback(() => {
     const text = inputText.trim()
     if (!text || isTyping || isStreaming) return
 
+    // Ensure we have an active session
+    let sessionId = activeSessionId
+    if (!sessionId) {
+      sessionId = createSession(text)
+    }
+
     // Check for command
     let command: string | undefined
-    let matchedCommand: AICommand | undefined
     if (text.startsWith('/')) {
-      matchedCommand = aiCommands.find((c) => text.startsWith(c.name))
+      const matchedCommand = aiCommands.find((c) => text.startsWith(c.name))
       if (matchedCommand) {
         command = matchedCommand.name
       }
     }
-
-    // Parse for potential file attachments (mock)
-    const attachments: FileAttachment[] = []
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: text,
       time: getCurrentTime(),
-      attachments: attachments.length > 0 ? attachments : undefined,
     }
 
     // Add user message
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === activeSessionId
-          ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime() }
+        s.id === sessionId
+          ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime(), title: s.messages.length === 0 ? text.slice(0, 40) + (text.length > 40 ? '...' : '') : s.title }
           : s
       )
     )
@@ -828,16 +734,15 @@ export function ChatPage() {
     setShowCommands(false)
     setIsTyping(true)
 
-    // Determine response
-    const responseKey = command || 'default'
-    const responseText = streamingResponses[responseKey] || streamingResponses.default
+    // Generate response
+    const responseText = generateResponse(text, command)
 
     // Show typing indicator, then stream
     setTimeout(() => {
       setIsTyping(false)
-      simulateStreaming(responseText, command)
+      simulateStreaming(responseText, sessionId!, command)
     }, 800)
-  }, [inputText, isTyping, isStreaming, activeSessionId, simulateStreaming])
+  }, [inputText, isTyping, isStreaming, activeSessionId, createSession, generateResponse, simulateStreaming])
 
   // Handle command selection
   const handleCommandSelect = (cmd: AICommand) => {
@@ -846,582 +751,417 @@ export function ChatPage() {
     inputRef.current?.focus()
   }
 
-  // Handle template selection
-  const handleTemplateSelect = (template: PromptTemplate) => {
+  // Handle prompt template click
+  const handlePromptClick = (template: PromptTemplate) => {
     setInputText(template.prompt)
-    setShowTemplates(false)
+    inputRef.current?.focus()
+    // Auto-send
+    setTimeout(() => {
+      const sendBtn = document.querySelector('[data-send-btn]') as HTMLButtonElement
+      if (sendBtn) sendBtn.click()
+    }, 100)
+  }
+
+  // New chat
+  const handleNewChat = () => {
+    setActiveSessionId(null)
+    setInputText('')
     inputRef.current?.focus()
   }
 
-  // Create new session
-  const handleNewChat = () => {
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: 'New Chat',
-      createdAt: getCurrentTime(),
-      updatedAt: getCurrentTime(),
-      pinned: false,
-      unread: 0,
-      tags: [],
-      model: AI_MODELS.find((m) => m.id === selectedModel)?.name || 'GPT-4',
-      tokenCount: 0,
-      messages: [
-        {
-          id: 'welcome-' + Date.now(),
-          role: 'assistant',
-          content: "Hello! I'm your VisionFlow AI assistant. I can help you with lead generation, outreach, CRM management, proposals, analytics, and workflow automation. What would you like to do today?",
-          time: getCurrentTime(),
-        },
-      ],
-    }
-    setSessions((prev) => [newSession, ...prev])
-    setActiveSessionId(newSession.id)
-  }
-
   // Delete session
-  const handleDeleteSession = (sessionId: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId))
-    if (activeSessionId === sessionId) {
-      setActiveSessionId(sessions[0]?.id || '')
+  const confirmDeleteSession = () => {
+    if (!deleteSessionId) return
+    setSessions((prev) => prev.filter((s) => s.id !== deleteSessionId))
+    if (activeSessionId === deleteSessionId) {
+      setActiveSessionId(null)
     }
     setDeleteSessionId(null)
     toast({ title: 'Chat deleted', description: 'The conversation has been removed.' })
   }
 
-  // Rename session
-  const handleRenameSession = (sessionId: string) => {
-    if (!editingTitle.trim()) return
+  // Toggle pin
+  const togglePin = (sessionId: string) => {
     setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, title: editingTitle.trim() } : s))
-    )
-    setEditingSessionId(null)
-  }
-
-  // Pin/unpin session
-  const handleTogglePin = (sessionId: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, pinned: !s.pinned } : s))
+      prev.map((s) => s.id === sessionId ? { ...s, pinned: !s.pinned } : s)
     )
   }
 
   // Copy message
-  const handleCopy = (msgId: string, content: string) => {
+  const copyMessage = (id: string, content: string) => {
     navigator.clipboard.writeText(content)
-    setCopiedId(msgId)
-    toast({ title: 'Copied to clipboard' })
+    setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
   }
 
   // Feedback
-  const handleFeedback = (msgId: string, type: 'positive' | 'negative') => {
+  const giveFeedback = (msgId: string, type: 'positive' | 'negative') => {
     setFeedbackMap((prev) => ({ ...prev, [msgId]: type }))
-    toast({ title: type === 'positive' ? 'Thanks for the feedback!' : 'We\'ll improve this response.' })
-  }
-
-  // Regenerate last response
-  const handleRegenerate = () => {
-    if (isTyping || isStreaming) return
-    const lastAssistantIdx = [...activeSession.messages].reverse().findIndex((m) => m.role === 'assistant')
-    if (lastAssistantIdx === -1) return
-
-    const realIdx = activeSession.messages.length - 1 - lastAssistantIdx
-    const lastMsg = activeSession.messages[realIdx]
-
-    // Remove last assistant message
     setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeSessionId
-          ? { ...s, messages: s.messages.filter((_, i) => i !== realIdx) }
-          : s
-      )
+      prev.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) =>
+          m.id === msgId ? { ...m, feedback: type } : m
+        ),
+      }))
     )
-
-    // Re-stream a different response
-    setIsTyping(true)
-    setTimeout(() => {
-      setIsTyping(false)
-      const responses = Object.values(streamingResponses)
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-      simulateStreaming(randomResponse, lastMsg?.command)
-    }, 800)
+    toast({ title: 'Feedback recorded', description: `Thanks for your ${type} feedback!` })
   }
 
-  // Keyboard handler
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+  // Save edited title
+  const saveEditTitle = () => {
+    if (editingSessionId && editingTitle.trim()) {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === editingSessionId ? { ...s, title: editingTitle.trim() } : s
+        )
+      )
     }
-    // Show command palette on /
-    if (e.key === '/' && inputText === '') {
-      setShowCommands(true)
-    }
-    // Hide command palette on Escape
-    if (e.key === 'Escape') {
-      setShowCommands(false)
-    }
+    setEditingSessionId(null)
+    setEditingTitle('')
   }
 
-  // Input change handler with command detection
+  // Handle input change with command detection
   const handleInputChange = (value: string) => {
     setInputText(value)
     if (value.startsWith('/')) {
       setShowCommands(true)
-      setCommandFilter(value)
+      setCommandFilter(value.slice(1))
     } else {
       setShowCommands(false)
     }
   }
 
-  // Mock file upload
-  const handleFileUpload = () => {
-    toast({ title: 'File upload', description: 'Drag and drop files or click to browse. Supported: PDF, XLSX, CSV, PNG, JPG (max 10MB)' })
-  }
-
-  // Clear chat
-  const handleClearChat = () => {
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeSessionId
-          ? { ...s, messages: [s.messages[0]], updatedAt: getCurrentTime(), tokenCount: 0 }
-          : s
-      )
-    )
-    toast({ title: 'Chat cleared', description: 'Conversation history has been reset.' })
+  // Handle keyboard
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+    if (e.key === 'Escape') {
+      setShowCommands(false)
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Skeleton loader
-  // ---------------------------------------------------------------------------
-  if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="hidden md:flex w-[280px] shrink-0 flex-col border-r bg-card/50 p-4 gap-4">
-          <Skeleton className="h-9 w-full rounded-lg" />
-          <Skeleton className="h-9 w-full rounded-lg" />
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-lg" />
-          ))}
-        </div>
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center gap-3 border-b px-6 py-3">
-            <Skeleton className="size-9 rounded-xl" />
-            <div className="space-y-1.5">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          </div>
-          <div className="flex-1 p-4 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={`flex gap-3 ${i % 2 === 0 ? 'flex-row-reverse' : ''}`}>
-                <Skeleton className="size-8 rounded-full shrink-0" />
-                <Skeleton className="h-20 w-[60%] rounded-2xl" />
-              </div>
-            ))}
-          </div>
-          <div className="border-t px-4 py-3">
-            <Skeleton className="h-11 w-full max-w-3xl mx-auto rounded-2xl" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // Session sidebar item
+  // Render: Session sidebar
   // ---------------------------------------------------------------------------
 
-  const renderSessionItem = (session: ChatSession) => {
-    const isActive = session.id === activeSessionId
-    const isEditing = editingSessionId === session.id
-
-    return (
-      <motion.div
-        key={session.id}
-        layout
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -10 }}
-        transition={{ duration: 0.2, ease: 'easeOut' as const }}
-        className={`
-          group relative flex items-start gap-2.5 rounded-lg px-2.5 py-2 cursor-pointer
-          transition-colors duration-150
-          ${isActive ? 'bg-primary/10 border border-primary/20' : 'hover:bg-muted/60 border border-transparent'}
-        `}
-        onClick={() => {
-          setActiveSessionId(session.id)
-          // Clear unread
-          setSessions((prev) =>
-            prev.map((s) => (s.id === session.id ? { ...s, unread: 0 } : s))
-          )
-        }}
-      >
-        <MessageSquare className={`
-          size-4 shrink-0 mt-0.5
-          ${isActive ? 'text-primary' : 'text-muted-foreground'}
-        `} />
-
-        <div className="flex-1 min-w-0">
-          {isEditing ? (
+  const renderSidebar = () => (
+    <motion.aside
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' as const }}
+      className={`${showSessions ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden border-r bg-card/50 flex-shrink-0`}
+    >
+      <div className="flex flex-col h-full w-72">
+        {/* Sidebar header */}
+        <div className="p-3 border-b space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <MessageSquare className="size-4 text-primary" />
+              Conversations
+            </h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={handleNewChat}>
+                    <Plus className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>New Chat</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
-              value={editingTitle}
-              onChange={(e) => setEditingTitle(e.target.value)}
-              onBlur={() => handleRenameSession(session.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameSession(session.id)
-                if (e.key === 'Escape') setEditingSessionId(null)
-              }}
-              className="h-6 text-xs px-1.5 py-0"
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
+              placeholder="Search chats..."
+              className="pl-8 h-8 text-xs"
+              value={sessionSearch}
+              onChange={(e) => setSessionSearch(e.target.value)}
             />
-          ) : (
-            <p className={`text-xs font-medium truncate ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>
-              {session.title}
-            </p>
-          )}
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[10px] text-muted-foreground">{session.messages.length} msgs</span>
-            <span className="text-[10px] text-muted-foreground">·</span>
-            <span className="text-[10px] text-muted-foreground">{session.updatedAt}</span>
           </div>
-          {session.tags.length > 0 && (
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {session.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-[9px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Unread badge */}
-        {session.unread > 0 && (
-          <Badge variant="destructive" className="h-4 min-w-[16px] px-1 text-[9px] font-bold shrink-0">
-            {session.unread}
-          </Badge>
-        )}
-
-        {/* Pin indicator */}
-        {session.pinned && (
-          <Pin className="size-3 text-primary shrink-0 mt-1" />
-        )}
-
-        {/* Action menu */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-6">
-                <MoreHorizontal className="size-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => { setEditingSessionId(session.id); setEditingTitle(session.title) }}>
-                <Edit3 className="size-3.5 mr-2" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleTogglePin(session.id)}>
-                <Pin className="size-3.5 mr-2" /> {session.pinned ? 'Unpin' : 'Pin'}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteSessionId(session.id)}>
-                <Trash2 className="size-3.5 mr-2" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </motion.div>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* ================================================================ */}
-      {/* SESSION SIDEBAR                                                   */}
-      {/* ================================================================ */}
-      <AnimatePresence>
-        {(showSessions || typeof window !== 'undefined') && (
-          <motion.aside
-            className={`
-              hidden md:flex flex-col border-r bg-card/50 shrink-0
-              ${showSessions ? 'w-[280px]' : 'w-0 overflow-hidden'}
-            `}
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: showSessions ? 280 : 0, opacity: showSessions ? 1 : 0 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' as const }}
-          >
-            {/* Header */}
-            <div className="p-3 border-b">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-foreground">Chats</h2>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-7" onClick={handleNewChat}>
-                        <Plus className="size-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>New chat</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+        {/* Session list */}
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
+            {sessions.length === 0 ? (
+              <div className="py-8 text-center">
+                <MessageSquare className="size-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No conversations yet</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1">Start a chat to begin</p>
               </div>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Search chats..."
-                  className="h-8 text-xs pl-8"
-                  value={sessionSearch}
-                  onChange={(e) => setSessionSearch(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Sessions list */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {/* Pinned */}
+            ) : (
+              <>
+                {/* Pinned sessions */}
                 {filteredSessions.pinned.length > 0 && (
-                  <>
-                    <p className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pinned</p>
-                    <AnimatePresence>
-                      {filteredSessions.pinned.map(renderSessionItem)}
-                    </AnimatePresence>
-                  </>
-                )}
-
-                {/* Recent */}
-                {filteredSessions.recent.length > 0 && (
-                  <>
-                    <p className="px-2.5 py-1 mt-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Recent</p>
-                    <AnimatePresence>
-                      {filteredSessions.recent.map(renderSessionItem)}
-                    </AnimatePresence>
-                  </>
-                )}
-
-                {filteredSessions.pinned.length === 0 && filteredSessions.recent.length === 0 && (
-                  <div className="py-8 text-center">
-                    <MessageSquare className="size-8 mx-auto text-muted-foreground/50" />
-                    <p className="mt-2 text-xs text-muted-foreground">No chats found</p>
+                  <div className="mb-2">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1 flex items-center gap-1">
+                      <Pin className="size-2.5" /> Pinned
+                    </p>
+                    {filteredSessions.pinned.map(renderSessionItem)}
                   </div>
                 )}
-              </div>
-            </ScrollArea>
+                {/* Recent sessions */}
+                {filteredSessions.recent.length > 0 && (
+                  <div>
+                    {filteredSessions.pinned.length > 0 && filteredSessions.recent.length > 0 && (
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1">
+                        Recent
+                      </p>
+                    )}
+                    {filteredSessions.recent.map(renderSessionItem)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    </motion.aside>
+  )
 
-            {/* Footer */}
-            <div className="p-3 border-t">
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>{sessions.length} conversations</span>
-                <span>Total: {sessions.reduce((a, s) => a + s.tokenCount, 0).toLocaleString()} tokens</span>
-              </div>
+  const renderSessionItem = (session: ChatSession) => (
+    <div
+      key={session.id}
+      className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
+        activeSessionId === session.id
+          ? 'bg-primary/10 border border-primary/20'
+          : 'hover:bg-muted/50 border border-transparent'
+      }`}
+      onClick={() => setActiveSessionId(session.id)}
+    >
+      <div className="flex-1 min-w-0">
+        {editingSessionId === session.id ? (
+          <Input
+            className="h-6 text-xs"
+            value={editingTitle}
+            onChange={(e) => setEditingTitle(e.target.value)}
+            onBlur={saveEditTitle}
+            onKeyDown={(e) => e.key === 'Enter' && saveEditTitle()}
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <>
+            <p className="text-xs font-medium truncate">{session.title}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] text-muted-foreground">{session.updatedAt}</span>
+              {session.unread > 0 && (
+                <Badge className="size-4 p-0 text-[8px] flex items-center justify-center">
+                  {session.unread}
+                </Badge>
+              )}
             </div>
-          </motion.aside>
+          </>
         )}
-      </AnimatePresence>
-
-      {/* ================================================================ */}
-      {/* MAIN CHAT AREA                                                    */}
-      {/* ================================================================ */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Chat Header */}
-        <div className="flex items-center justify-between border-b px-4 py-2.5 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Toggle sessions sidebar */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8 shrink-0 md:flex hidden" onClick={() => setShowSessions(!showSessions)}>
-                    {showSessions ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{showSessions ? 'Hide sessions' : 'Show sessions'}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {/* Mobile menu */}
-            <Button variant="ghost" size="icon" className="size-8 shrink-0 md:hidden" onClick={() => setShowSessions(!showSessions)}>
-              <MessageSquare className="size-4" />
+      </div>
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-5"
+          onClick={(e) => { e.stopPropagation(); togglePin(session.id) }}
+        >
+          <Pin className={`size-2.5 ${session.pinned ? 'text-primary fill-primary' : ''}`} />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="size-5">
+              <MoreHorizontal className="size-2.5" />
             </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem onClick={() => { setEditingSessionId(session.id); setEditingTitle(session.title) }}>
+              <Edit3 className="size-3 mr-2" /> Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onClick={() => setDeleteSessionId(session.id)}
+            >
+              <Trash2 className="size-3 mr-2" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  )
 
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-              <Sparkles className="size-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-sm font-semibold text-foreground truncate">
-                {activeSession?.title || 'AI Chat'}
-              </h1>
-              <div className="flex items-center gap-2">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-[11px] text-muted-foreground">Online</span>
-                <span className="text-[11px] text-muted-foreground">·</span>
-                <span className="text-[11px] text-muted-foreground">{activeSession?.tokenCount.toLocaleString()} tokens</span>
+  // ---------------------------------------------------------------------------
+  // Render: Welcome screen
+  // ---------------------------------------------------------------------------
+
+  const renderWelcome = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="max-w-xl w-full space-y-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' as const }}
+          className="text-center space-y-3"
+        >
+          <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-vf-emerald to-vf-teal shadow-lg mb-2">
+            <Sparkles className="size-7 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold">Welcome to AI Chat</h2>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+            Start a conversation with your AI assistant. Ask about leads, generate proposals, analyze your pipeline, or automate workflows.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' as const }}
+          className="grid grid-cols-2 gap-3"
+        >
+          {promptTemplates.map((template, idx) => {
+            const Icon = template.icon
+            return (
+              <motion.button
+                key={template.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.2 + idx * 0.06, ease: 'easeOut' as const }}
+                onClick={() => handlePromptClick(template)}
+                className="flex items-start gap-3 p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left group"
+              >
+                <div className={`rounded-lg p-2 ${template.color} shrink-0`}>
+                  <Icon className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium group-hover:text-primary transition-colors">{template.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
+                </div>
+              </motion.button>
+            )
+          })}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' as const }}
+          className="flex items-center justify-center gap-4 text-xs text-muted-foreground"
+        >
+          <span className="flex items-center gap-1"><Command className="size-3" /> Type / for commands</span>
+          <span className="text-muted-foreground/40">|</span>
+          <span className="flex items-center gap-1"><Mic className="size-3" /> Voice input</span>
+          <span className="text-muted-foreground/40">|</span>
+          <span className="flex items-center gap-1"><Paperclip className="size-3" /> Attach files</span>
+        </motion.div>
+      </div>
+    </div>
+  )
+
+  // ---------------------------------------------------------------------------
+  // Render: Chat area
+  // ---------------------------------------------------------------------------
+
+  const renderChatArea = () => {
+    if (!activeSession) return renderWelcome()
+
+    return (
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Chat header */}
+        <div className="px-4 py-3 border-b bg-card/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-8">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                {activeSession.title.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="text-sm font-medium">{activeSession.title}</h3>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span>{activeSession.model}</span>
+                <span>&#8226;</span>
+                <span>{activeSession.messages.length} messages</span>
+                <span>&#8226;</span>
+                <span>{activeSession.tokenCount.toLocaleString()} tokens</span>
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1">
             {/* Model picker */}
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1.5 text-xs hidden sm:flex"
-                onClick={() => setShowModelPicker(!showModelPicker)}
-              >
-                <Brain className="size-3" />
-                {AI_MODELS.find((m) => m.id === selectedModel)?.name}
-                <ChevronRight className="size-3" />
-              </Button>
-              <AnimatePresence>
-                {showModelPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-full mt-1 z-50 rounded-lg border bg-popover shadow-lg overflow-hidden"
+            <DropdownMenu open={showModelPicker} onOpenChange={setShowModelPicker}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
+                  <Brain className="size-3" />
+                  {AI_MODELS.find(m => m.id === selectedModel)?.name ?? 'GPT-4'}
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0">
+                    {AI_MODELS.find(m => m.id === selectedModel)?.badge ?? 'AI'}
+                  </Badge>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {AI_MODELS.map((model) => (
+                  <DropdownMenuItem
+                    key={model.id}
+                    onClick={() => setSelectedModel(model.id)}
+                    className="flex items-center justify-between"
                   >
-                    {AI_MODELS.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => { setSelectedModel(model.id); setShowModelPicker(false) }}
-                        className={`
-                          flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/60 transition-colors
-                          ${selectedModel === model.id ? 'bg-primary/5 text-primary' : 'text-foreground'}
-                        `}
-                      >
-                        <Brain className="size-3" />
-                        <span className="font-medium">{model.name}</span>
-                        <Badge variant="secondary" className="ml-auto text-[9px] px-1.5">{model.badge}</Badge>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Templates button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={() => setShowTemplates(!showTemplates)}>
-                    <Zap className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Prompt templates</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {/* Clear chat */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={handleClearChat}>
-                    <RotateCcw className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Clear chat</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {/* Toggle context panel */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8 hidden lg:flex" onClick={() => setShowContext(!showContext)}>
-                    {showContext ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{showContext ? 'Hide context' : 'Show context'}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                    <span>{model.name}</span>
+                    <Badge variant="outline" className="text-[9px] ml-2">{model.badge}</Badge>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* MESSAGES AREA                                                 */}
-        {/* ============================================================ */}
-        <ScrollArea ref={scrollRef} className="flex-1 px-4">
-          <div className="mx-auto max-w-3xl space-y-4 py-6">
-            <AnimatePresence initial={false}>
-              {activeSession?.messages.map((msg) => (
+        {/* Messages */}
+        <ScrollArea ref={scrollRef} className="flex-1">
+          <div className="max-w-3xl mx-auto py-4">
+            {activeSession.messages.length === 0 && (
+              <div className="text-center py-16">
+                <Sparkles className="size-8 text-primary/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Start the conversation</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Ask anything or use a slash command</p>
+              </div>
+            )}
+            <AnimatePresence mode="popLayout">
+              {activeSession.messages.map((msg) => (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' as const }}
-                  className={`flex items-start gap-3 ${
-                    msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' as const }}
+                  className={`flex items-start gap-3 px-4 py-3 ${
+                    msg.role === 'user' ? 'flex-row-reverse' : ''
                   }`}
                 >
-                  {/* Avatar */}
-                  {msg.role === 'assistant' ? (
-                    <Avatar className="mt-1 size-8 shrink-0 border border-border">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Bot className="size-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <Avatar className="mt-1 size-8 shrink-0 border border-border">
-                      <AvatarFallback className="bg-vf-teal/15 text-vf-teal">
-                        <User className="size-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-
-                  {/* Message content */}
-                  <div
-                    className={`max-w-[80%] space-y-1.5 ${
-                      msg.role === 'user' ? 'items-end' : 'items-start'
-                    }`}
-                  >
-                    {/* Command badge */}
-                    {msg.command && (
-                      <Badge variant="secondary" className="gap-1 text-[10px] font-mono px-1.5">
-                        <Command className="size-2.5" />
-                        {msg.command}
-                      </Badge>
-                    )}
-
-                    {msg.role === 'user' ? (
-                      <div className="rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground shadow-sm">
-                        {msg.content}
-                      </div>
-                    ) : (
-                      <Card className="border shadow-sm">
-                        <CardContent className="px-4 py-3">
-                          <div className="text-sm leading-relaxed space-y-1">
-                            {renderMarkdown(msg.content)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* File attachments */}
+                  <Avatar className="size-8 shrink-0 border border-border">
+                    <AvatarFallback className={
+                      msg.role === 'assistant'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-vf-teal/10 text-vf-teal'
+                    }>
+                      {msg.role === 'assistant' ? <Bot className="size-4" /> : <User className="size-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                    {/* Attachments */}
                     {msg.attachments && msg.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {msg.attachments.map((file) => (
-                          <FileAttachmentCard key={file.id} file={file} />
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
+                        {msg.attachments.map((att) => (
+                          <FileAttachmentCard key={att.id} file={att} />
                         ))}
                       </div>
                     )}
-
-                    {/* Timestamp and action buttons */}
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                      }`}
-                    >
-                      <span className="text-[10px] text-muted-foreground">
-                        {msg.time}
-                      </span>
+                    <div className={`rounded-2xl px-4 py-2.5 text-sm ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                        : 'border bg-card rounded-tl-sm shadow-sm'
+                    }`}>
+                      {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground">{msg.time}</span>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-0.5">
                           <TooltipProvider>
@@ -1430,13 +1170,13 @@ export function ChatPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className={`size-6 ${copiedId === msg.id ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'}`}
-                                  onClick={() => handleCopy(msg.id, msg.content)}
+                                  className="size-5"
+                                  onClick={() => copyMessage(msg.id, msg.content)}
                                 >
-                                  {copiedId === msg.id ? <Check className="size-3" /> : <Copy className="size-3" />}
+                                  {copiedId === msg.id ? <Check className="size-2.5 text-emerald-500" /> : <Copy className="size-2.5" />}
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>{copiedId === msg.id ? 'Copied!' : 'Copy'}</TooltipContent>
+                              <TooltipContent>Copy</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                           <TooltipProvider>
@@ -1445,10 +1185,10 @@ export function ChatPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className={`size-6 ${feedbackMap[msg.id] === 'positive' ? 'text-emerald-500' : 'text-muted-foreground hover:text-emerald-500'}`}
-                                  onClick={() => handleFeedback(msg.id, 'positive')}
+                                  className="size-5"
+                                  onClick={() => giveFeedback(msg.id, 'positive')}
                                 >
-                                  <ThumbsUp className="size-3" />
+                                  <ThumbsUp className={`size-2.5 ${feedbackMap[msg.id] === 'positive' ? 'text-emerald-500 fill-emerald-500' : ''}`} />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Helpful</TooltipContent>
@@ -1460,10 +1200,10 @@ export function ChatPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className={`size-6 ${feedbackMap[msg.id] === 'negative' ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'}`}
-                                  onClick={() => handleFeedback(msg.id, 'negative')}
+                                  className="size-5"
+                                  onClick={() => giveFeedback(msg.id, 'negative')}
                                 >
-                                  <ThumbsDown className="size-3" />
+                                  <ThumbsDown className={`size-2.5 ${feedbackMap[msg.id] === 'negative' ? 'text-red-500 fill-red-500' : ''}`} />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Not helpful</TooltipContent>
@@ -1477,325 +1217,233 @@ export function ChatPage() {
               ))}
             </AnimatePresence>
 
-            {/* Streaming text */}
-            {isStreaming && streamingText && (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-3"
-              >
-                <Avatar className="mt-1 size-8 shrink-0 border border-border">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    <Bot className="size-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <Card className="border shadow-sm max-w-[80%]">
-                  <CardContent className="px-4 py-3">
-                    <div className="text-sm leading-relaxed space-y-1">
-                      {renderMarkdown(streamingText)}
-                      <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse rounded-sm" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
             {/* Typing indicator */}
             <AnimatePresence>
               {isTyping && <TypingIndicator />}
             </AnimatePresence>
+
+            {/* Streaming text */}
+            {isStreaming && streamingText && (
+              <div className="flex items-start gap-3 px-4 py-2">
+                <Avatar className="size-8 shrink-0 border border-border">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <Bot className="size-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="rounded-2xl rounded-tl-sm border bg-card px-4 py-2.5 text-sm shadow-sm max-w-[80%]">
+                  {renderMarkdown(streamingText)}
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
-        {/* ============================================================ */}
-        {/* PROMPT TEMPLATES OVERLAY                                      */}
-        {/* ============================================================ */}
-        <AnimatePresence>
-          {showTemplates && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="border-t bg-card/80 backdrop-blur-sm px-4 py-4"
-            >
-              <div className="mx-auto max-w-3xl">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Prompt Templates</h3>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => setShowTemplates(false)}>
-                    <X className="size-4" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {promptTemplates.map((template) => {
-                    const TemplateIcon = template.icon
-                    return (
-                      <Button
-                        key={template.id}
-                        variant="ghost"
-                        className={`flex h-auto flex-col items-center gap-1.5 rounded-xl px-2 py-3 ${template.color} transition-colors`}
-                        onClick={() => handleTemplateSelect(template)}
-                      >
-                        <TemplateIcon className="size-4" />
-                        <span className="text-[11px] font-medium leading-tight text-center">{template.name}</span>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ============================================================ */}
-        {/* INPUT AREA                                                    */}
-        {/* ============================================================ */}
-        <div className="border-t px-4 py-3 shrink-0">
-          <div className="mx-auto max-w-3xl relative">
+        {/* Input area */}
+        <div className="px-4 py-3 border-t bg-card/50">
+          <div className="max-w-3xl mx-auto relative">
             {/* Command palette */}
             <AnimatePresence>
               {showCommands && (
-                <CommandPalette
-                  onSelect={handleCommandSelect}
-                  filter={commandFilter}
-                />
+                <CommandPalette onSelect={handleCommandSelect} filter={commandFilter} />
               )}
             </AnimatePresence>
 
-            <div className="flex items-center gap-2 rounded-2xl border bg-card px-3 py-2 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/30">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground" onClick={handleFileUpload}>
-                      <Paperclip className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Attach file</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <Input
-                ref={inputRef}
-                value={inputText}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask VisionFlow AI to do anything... (type / for commands)"
-                className="flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
-                disabled={isTyping || isStreaming}
-              />
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground">
-                      <Mic className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Voice input</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
+            <div className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <div className="flex items-center gap-1.5 rounded-xl border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 transition-shadow">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                          <Paperclip className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Attach file</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Input
+                    ref={inputRef}
+                    placeholder="Type a message... (use / for commands)"
+                    className="border-0 shadow-none focus-visible:ring-0 px-0 text-sm h-7"
+                    value={inputText}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isStreaming}
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                          <Mic className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Voice input</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
               <Button
+                data-send-btn
                 size="icon"
-                className="size-9 shrink-0 rounded-xl bg-gradient-to-r from-primary to-vf-teal text-primary-foreground shadow-md hover:shadow-lg transition-shadow"
+                className="rounded-xl size-10 shrink-0"
                 onClick={handleSend}
                 disabled={!inputText.trim() || isTyping || isStreaming}
               >
                 <Send className="size-4" />
               </Button>
             </div>
-            <div className="flex items-center justify-between mt-1.5">
-              <p className="text-[10px] text-muted-foreground">
-                Press <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Enter</kbd> to send · <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">/</kbd> for commands · <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Esc</kbd> to close
-              </p>
-              {isStreaming && (
-                <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-muted-foreground" onClick={() => {
-                  if (streamIntervalRef.current) clearInterval(streamIntervalRef.current)
-                  setIsStreaming(false)
-                  setStreamingText('')
-                }}>
-                  <X className="size-3" /> Stop generating
-                </Button>
-              )}
-            </div>
+            <p className="text-[10px] text-muted-foreground/60 text-center mt-1.5">
+              AI responses are simulated. Connect an AI provider for real responses.
+            </p>
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* ================================================================ */}
-      {/* CONTEXT / AI PANEL                                                */}
-      {/* ================================================================ */}
-      <AnimatePresence>
-        {showContext && (
-          <motion.aside
-            className="hidden lg:flex w-[280px] min-w-[280px] max-w-[320px] shrink-0 flex-col border-l bg-card/50"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' as const }}
-          >
-            {/* Tabs: Context / Memory / Templates */}
-            <div className="flex border-b">
-              {(['Context', 'Memory', 'Agents'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  className="flex-1 px-2 py-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors border-b-2 border-transparent first:border-b-primary"
-                >
-                  {tab}
-                </button>
-              ))}
+  // ---------------------------------------------------------------------------
+  // Render: Context panel
+  // ---------------------------------------------------------------------------
+
+  const renderContextPanel = () => (
+    <motion.aside
+      initial={{ x: 20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' as const }}
+      className={`${showContext ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-l bg-card/50 flex-shrink-0`}
+    >
+      <div className="flex flex-col h-full w-64">
+        <div className="p-3 border-b">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Brain className="size-4 text-primary" />
+            Context
+          </h3>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-3 space-y-4">
+            {/* AI Memory */}
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Bookmark className="size-3" /> AI Memory
+              </h4>
+              <p className="text-[11px] text-muted-foreground/60">
+                AI memory items will appear as you chat and the assistant learns your preferences.
+              </p>
             </div>
 
-            <ScrollArea className="flex-1">
-              {/* Active Agents */}
-              <div className="border-b p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-foreground">Active Agents</h3>
-                  <Badge variant="secondary" className="gap-1 text-[9px]">
-                    <span className="relative flex size-1.5">
-                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-                    </span>
-                    {activeAgents.filter(a => a.status === 'active').length} live
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {activeAgents.map((agent) => (
-                    <div
-                      key={agent.name}
-                      className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
-                    >
-                      <span className="relative flex size-2.5">
-                        {agent.status === 'active' && (
-                          <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${agent.color}`} />
-                        )}
-                        <span className={`relative inline-flex size-2.5 rounded-full ${agent.color} ${agent.status === 'paused' ? 'opacity-50' : ''}`} />
-                      </span>
-                      <span className="flex-1 text-xs font-medium text-foreground">
-                        {agent.name}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={`px-1.5 py-0 text-[9px] font-normal ${
-                          agent.status === 'active'
-                            ? 'text-emerald-600 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/40'
-                            : 'text-amber-600 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950/40'
-                        }`}
-                      >
-                        {agent.status === 'active' ? 'Running' : 'Paused'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <Separator />
 
-              {/* AI Memory */}
-              <div className="border-b p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-foreground">AI Memory</h3>
-                  <Badge variant="outline" className="px-1.5 py-0 text-[9px]">
-                    <Brain className="size-2.5 mr-1" />
-                    {aiMemoryItems.length} items
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {aiMemoryItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
-                    >
-                      <div className={`
-                        mt-0.5 size-2 shrink-0 rounded-full
-                        ${item.source === 'conversation' ? 'bg-primary' : item.source === 'user-input' ? 'bg-vf-teal' : 'bg-vf-amber'}
-                      `} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold text-foreground">{item.key}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{item.value}</p>
-                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">{item.updatedAt}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="border-b p-4">
-                <h3 className="mb-3 text-xs font-semibold text-foreground">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {promptTemplates.slice(0, 4).map((action) => {
-                    const ActionIcon = action.icon
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="ghost"
-                        className={`flex h-auto flex-col items-center gap-1 rounded-lg px-1.5 py-2 ${action.color} transition-colors`}
-                        onClick={() => handleTemplateSelect(action)}
-                      >
-                        <ActionIcon className="size-3.5" />
-                        <span className="text-[10px] font-medium leading-tight">{action.name}</span>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="p-4">
-                <h3 className="mb-3 text-xs font-semibold text-foreground">Recent Activity</h3>
-                <div className="space-y-2.5">
-                  {recentActivity.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
-                    >
-                      <div className={`
-                        mt-0.5 size-1.5 shrink-0 rounded-full
-                        ${item.type === 'agent' ? 'bg-emerald-500' : item.type === 'workflow' ? 'bg-vf-teal' : 'bg-primary'}
-                      `} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] leading-snug text-foreground">
-                          {item.text}
-                        </p>
-                        <p className="mt-0.5 text-[9px] text-muted-foreground">
-                          {item.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </ScrollArea>
-
-            {/* Footer status */}
-            <div className="border-t p-3">
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>{activeAgents.filter(a => a.status === 'active').length} agents active</span>
-                <div className="flex items-center gap-1">
-                  <RotateCcw className="size-3" />
-                  <span>Last sync: just now</span>
-                </div>
-              </div>
+            {/* Active Agents */}
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Zap className="size-3" /> Active Agents
+              </h4>
+              <p className="text-[11px] text-muted-foreground/60">
+                No agents are currently running. Start using AI commands to activate agents.
+              </p>
             </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
 
-      {/* ================================================================ */}
-      {/* DELETE SESSION DIALOG                                             */}
-      {/* ================================================================ */}
+            <Separator />
+
+            {/* Recent Activity */}
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Clock className="size-3" /> Recent Activity
+              </h4>
+              <p className="text-[11px] text-muted-foreground/60">
+                Activity will appear here as you use AI features.
+              </p>
+            </div>
+          </div>
+        </ScrollArea>
+      </div>
+    </motion.aside>
+  )
+
+  // ---------------------------------------------------------------------------
+  // Main render
+  // ---------------------------------------------------------------------------
+
+  if (loading) {
+    return (
+      <div className="flex h-full gap-6 p-4 md:p-6">
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-12 w-48" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full rounded-xl border bg-background overflow-hidden">
+      {/* Session sidebar */}
+      {renderSidebar()}
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top toolbar */}
+        <div className="flex items-center justify-between px-3 py-2 border-b bg-card/30">
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={() => setShowSessions(!showSessions)}
+                  >
+                    {showSessions ? <PanelRightClose className="size-3.5" /> : <PanelRightOpen className="size-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{showSessions ? 'Hide sidebar' : 'Show sidebar'}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={handleNewChat}>
+              <Plus className="size-3" />
+              New Chat
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={() => setShowContext(!showContext)}
+                  >
+                    {showContext ? <PanelRightClose className="size-3.5" /> : <PanelRightOpen className="size-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{showContext ? 'Hide context' : 'Show context'}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        {/* Chat content */}
+        {renderChatArea()}
+      </div>
+
+      {/* Context panel */}
+      {renderContextPanel()}
+
+      {/* Delete confirmation */}
       <AlertDialog open={!!deleteSessionId} onOpenChange={(open) => !open && setDeleteSessionId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Chat</AlertDialogTitle>
+            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this conversation and all its messages. This action cannot be undone.
+              Are you sure you want to delete this conversation? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteSessionId && handleDeleteSession(deleteSessionId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={confirmDeleteSession} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

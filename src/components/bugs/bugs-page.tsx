@@ -2,12 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
-import {
-  bugList as seedBugs,
-  bugAnalytics,
-  type BugData,
-  type BugComment,
-} from '@/lib/data-bugs'
+import { PremiumEmptyState } from '@/components/shared/premium-empty-state'
 import {
   Card,
   CardHeader,
@@ -105,6 +100,48 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
+// ─── Types (defined locally) ──────────────────────────────────────────────
+
+interface BugData {
+  id: string
+  title: string
+  status: 'open' | 'under-review' | 'fixed' | 'rejected'
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  assignee: string
+  reporter: string
+  reporterEmail: string
+  createdAt: string
+  updatedAt: string
+  labels: string[]
+  module: string
+  description: string
+  stepsToReproduce: string[]
+  expectedBehavior: string
+  actualBehavior: string
+  environment: string
+  screenshotUrl: string | null
+  comments: BugComment[]
+  attachments: BugAttachment[]
+}
+
+interface BugComment {
+  id: string
+  author: string
+  authorAvatar: string
+  content: string
+  timestamp: string
+  type: 'comment' | 'status-change' | 'assign' | 'priority-change'
+}
+
+interface BugAttachment {
+  id: string
+  name: string
+  type: 'image' | 'document' | 'video'
+  size: string
+  uploadedAt: string
+  uploadedBy: string
+}
+
 // ─── Config ────────────────────────────────────────────────────────────────
 
 const severityConfig = {
@@ -145,10 +182,6 @@ function getInitials(name: string) {
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function daysBetween(a: string, b: string) {
-  return Math.ceil((new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60 * 24))
 }
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
@@ -348,9 +381,8 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
-          {/* Meta Info */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div><span className="text-muted-foreground">Reporter</span><p className="font-medium mt-0.5 flex items-center gap-1.5"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{bug.reporterEmail === 'prince.testing@visionflow.ai' ? 'PC' : bug.reporterEmail === 'ronak.testing@visionflow.ai' ? 'RJ' : 'MK'}</AvatarFallback></Avatar>{bug.reporter}</p></div>
+            <div><span className="text-muted-foreground">Reporter</span><p className="font-medium mt-0.5 flex items-center gap-1.5"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{getInitials(bug.reporter)}</AvatarFallback></Avatar>{bug.reporter}</p></div>
             <div><span className="text-muted-foreground">Assignee</span><p className="font-medium mt-0.5 flex items-center gap-1.5"><Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{getInitials(bug.assignee)}</AvatarFallback></Avatar>{bug.assignee}</p></div>
             <div><span className="text-muted-foreground">Created</span><p className="font-medium mt-0.5">{formatDate(bug.createdAt)}</p></div>
             <div><span className="text-muted-foreground">Updated</span><p className="font-medium mt-0.5">{formatDate(bug.updatedAt)}</p></div>
@@ -358,13 +390,11 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
 
           <Separator />
 
-          {/* Description */}
           <div>
             <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><AlertCircle className="h-4 w-4 text-muted-foreground" />Description</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">{bug.description}</p>
           </div>
 
-          {/* Steps to Reproduce */}
           {bug.stepsToReproduce.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><ClipboardList className="h-4 w-4 text-muted-foreground" />Steps to Reproduce</h4>
@@ -379,7 +409,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
             </div>
           )}
 
-          {/* Expected vs Actual */}
           <div className="grid grid-cols-2 gap-4">
             {bug.expectedBehavior && (
               <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 p-3">
@@ -395,7 +424,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
             )}
           </div>
 
-          {/* Environment & Labels */}
           <div className="grid grid-cols-2 gap-4">
             {bug.environment && (
               <div>
@@ -413,7 +441,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
             </div>
           </div>
 
-          {/* Attachments */}
           {bug.attachments.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Paperclip className="h-4 w-4 text-muted-foreground" />Attachments ({bug.attachments.length})</h4>
@@ -435,7 +462,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
 
           <Separator />
 
-          {/* Status Actions */}
           <div>
             <h4 className="text-sm font-semibold mb-2">Update Status</h4>
             <div className="flex flex-wrap gap-2">
@@ -452,7 +478,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
 
           <Separator />
 
-          {/* Comments */}
           <div>
             <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><MessageSquare className="h-4 w-4 text-muted-foreground" />Comments ({localComments.length})</h4>
             <div className="space-y-3 mb-4">
@@ -474,7 +499,6 @@ function BugDetailDialog({ bug, open, onOpenChange, onStatusChange }: { bug: Bug
                 </div>
               ))}
             </div>
-            {/* Add Comment */}
             <div className="flex items-start gap-2">
               <Textarea placeholder="Add a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} rows={2} className="text-xs flex-1" />
               <Button size="sm" className="h-9 mt-0.5 bg-vf-teal hover:bg-vf-teal/90 text-white" onClick={handleAddComment} disabled={!newComment.trim()}>
@@ -502,17 +526,13 @@ function BoardTab({ bugs, onView, onStatusChange }: { bugs: BugData[]; onView: (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {columns.map((col) => {
         const colBugs = bugs.filter((b) => b.status === col.key)
-        const Icon = col.config.icon
         return (
           <div key={col.key} className="space-y-3">
-            {/* Column Header */}
             <div className="flex items-center gap-2 px-1">
               <div className={`h-2.5 w-2.5 rounded-full ${col.config.dotClass}`} />
               <h3 className="text-sm font-semibold">{col.label}</h3>
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-auto">{colBugs.length}</Badge>
             </div>
-
-            {/* Bug Cards */}
             <ScrollArea className="h-[calc(100vh-420px)]">
               <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-2 pr-1">
                 {colBugs.map((bug) => {
@@ -594,7 +614,6 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
 
   return (
     <div className="space-y-4">
-      {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -629,7 +648,6 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
         </Select>
       </div>
 
-      {/* Table Header */}
       <div className="hidden lg:grid grid-cols-[80px_2fr_1fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 text-xs font-medium text-muted-foreground border-b">
         <span>ID</span>
         <button onClick={() => toggleSort('createdAt')} className="flex items-center gap-1 hover:text-foreground transition-colors text-left">Title <ArrowUpDown className="h-3 w-3" /></button>
@@ -640,7 +658,6 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
         <span>Actions</span>
       </div>
 
-      {/* Bug Rows */}
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-2">
         {paged.map((bug) => {
           const sev = severityConfig[bug.severity] ?? severityConfig.medium
@@ -690,7 +707,6 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
         )}
       </motion.div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-muted-foreground">{filtered.length} bug{filtered.length !== 1 ? 's' : ''}</p>
@@ -707,19 +723,28 @@ function ListTab({ bugs, onView, onStatusChange, onDelete }: { bugs: BugData[]; 
 // ─── Analytics Tab ─────────────────────────────────────────────────────────
 
 function AnalyticsTabView({ bugs }: { bugs: BugData[] }) {
-  const data = bugAnalytics
-  const maxDayTotal = Math.max(...data.bugsByDay.map((d) => d.opened + d.closed), 1)
-  const maxModuleCount = Math.max(...data.bugsByModule.map((d) => d.count), 1)
+  if (bugs.length === 0) {
+    return (
+      <PremiumEmptyState
+        icon={BarChart3}
+        title="No Analytics Data"
+        description="Bug analytics will appear once you start reporting bugs. Track trends, resolution rates, and team performance."
+      />
+    )
+  }
+
+  const openCount = bugs.filter((b) => b.status === 'open').length
+  const fixedCount = bugs.filter((b) => b.status === 'fixed').length
+  const resolutionRate = bugs.length > 0 ? Math.round((fixedCount / bugs.length) * 100) : 0
 
   return (
     <div className="space-y-6">
-      {/* Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Bugs', value: bugs.length, icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10' },
-          { label: 'Open', value: bugs.filter((b) => b.status === 'open').length, icon: CircleDot, color: 'text-red-500', bg: 'bg-red-500/10' },
-          { label: 'Avg Resolution', value: `${data.avgResolutionDays}d`, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-          { label: 'Resolution Rate', value: `${data.resolutionRate}%`, icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Open', value: openCount, icon: CircleDot, color: 'text-red-500', bg: 'bg-red-500/10' },
+          { label: 'Fixed', value: fixedCount, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Resolution Rate', value: `${resolutionRate}%`, icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-500/10' },
         ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
             <Card className="py-4">
@@ -735,164 +760,67 @@ function AnalyticsTabView({ bugs }: { bugs: BugData[] }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bugs Opened vs Closed */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="px-4 pt-4 pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="h-4 w-4 text-blue-500" />Opened vs Closed (7 Days)</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="space-y-2.5">
-              {data.bugsByDay.map((day) => {
-                const total = day.opened + day.closed
-                const widthPct = (total / maxDayTotal) * 100
-                return (
-                  <div key={day.date} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-12 shrink-0">{day.date}</span>
-                    <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
-                      <div className="flex h-full" style={{ width: `${widthPct}%` }}>
-                        <div className="bg-red-500 h-full" style={{ width: `${(day.opened / Math.max(total, 1)) * 100}%` }} />
-                        <div className="bg-emerald-500 h-full" style={{ width: `${(day.closed / Math.max(total, 1)) * 100}%` }} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] w-16">
-                      <span className="text-red-500">+{day.opened}</span>
-                      <span className="text-emerald-500">-{day.closed}</span>
-                    </div>
+      {/* Severity Distribution */}
+      <Card className="py-0 gap-0">
+        <CardHeader className="px-4 pt-4 pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-amber-500" />Severity Distribution</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <div className="space-y-2.5">
+            {(Object.entries(severityConfig) as [BugSeverity, typeof severityConfig[BugSeverity]][]).map(([key, cfg]) => {
+              const count = bugs.filter((b) => b.severity === key).length
+              const maxCount = Math.max(...Object.values(severityConfig).map((_, i) => bugs.filter((b) => b.severity === Object.keys(severityConfig)[i]).length), 1)
+              const widthPct = (count / maxCount) * 100
+              const Icon = cfg.icon
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-24 shrink-0 truncate">{cfg.label}</span>
+                  <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${widthPct}%` }} transition={{ duration: 0.6, ease: 'easeOut' as const }} className="h-full rounded" style={{ backgroundColor: cfg.dotColor }} />
                   </div>
-                )
-              })}
-            </div>
-            <div className="flex items-center gap-4 mt-3">
-              <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-red-500" /><span className="text-[10px] text-muted-foreground">Opened</span></div>
-              <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /><span className="text-[10px] text-muted-foreground">Closed</span></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bugs by Module */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="px-4 pt-4 pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-amber-500" />Bugs by Module</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="space-y-2.5">
-              {data.bugsByModule.map((m) => {
-                const widthPct = (m.count / maxModuleCount) * 100
-                return (
-                  <div key={m.module} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-24 shrink-0 truncate">{m.module}</span>
-                    <div className="flex-1 h-5 bg-muted/30 rounded overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${widthPct}%` }} transition={{ duration: 0.6, ease: 'easeOut' as const }} className="h-full rounded" style={{ backgroundColor: m.color }} />
-                    </div>
-                    <span className="text-xs font-medium w-6 text-right">{m.count}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Severity Distribution & Top Reporters */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Severity Distribution */}
-        <Card className="py-0 gap-0 lg:col-span-2">
-          <CardHeader className="px-4 pt-4 pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2"><Flame className="h-4 w-4 text-orange-500" />Severity Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {data.bugsBySeverity.map((s) => {
-                const pct = bugs.length > 0 ? (s.count / bugs.length) * 100 : 0
-                return (
-                  <div key={s.severity} className="text-center space-y-2">
-                    <div className="h-20 flex items-end justify-center">
-                      <motion.div initial={{ height: 0 }} animate={{ height: `${pct}%` }} transition={{ duration: 0.5, ease: 'easeOut' as const }} className="w-12 rounded-t" style={{ backgroundColor: s.color, minHeight: s.count > 0 ? 8 : 0 }} />
-                    </div>
-                    <p className="text-sm font-bold">{s.count}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.severity}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Reporters */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="px-4 pt-4 pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-vf-teal" />Top Reporters</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 space-y-3">
-            {data.topReporters.map((reporter, i) => (
-              <div key={reporter.name} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-muted-foreground w-4 text-right">#{i + 1}</span>
-                <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] font-bold bg-muted">{reporter.avatar}</AvatarFallback></Avatar>
-                <span className="text-sm font-medium flex-1 truncate">{reporter.name}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{reporter.count}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+                  <span className="text-xs font-medium w-6 text-right">{count}</span>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────────────────────
 
 export function BugsPage() {
   const { currentUser } = useAppStore()
   const { toast } = useToast()
-  const [bugs, setBugs] = useState<BugData[]>(seedBugs)
-  const [activeTab, setActiveTab] = useState<TabId>('board')
   const [loading, setLoading] = useState(true)
-  const [reportOpen, setReportOpen] = useState(false)
-  const [viewBug, setViewBug] = useState<BugData | null>(null)
-  const [viewOpen, setViewOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabId>('board')
+  const [bugs, setBugs] = useState<BugData[]>([])
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [selectedBug, setSelectedBug] = useState<BugData | null>(null)
   const [deleteBug, setDeleteBug] = useState<BugData | null>(null)
-  const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => setLoading(false), 600)
+    return () => clearTimeout(t)
   }, [])
 
-  // For tester accounts, filter bugs they reported
-  const visibleBugs = currentUser?.isTester
-    ? bugs.filter((b) => b.reporter === currentUser.name)
-    : bugs
-
-  // Stats
-  const openCount = visibleBugs.filter((b) => b.status === 'open').length
-  const reviewCount = visibleBugs.filter((b) => b.status === 'under-review').length
-  const fixedCount = visibleBugs.filter((b) => b.status === 'fixed').length
-  const criticalCount = visibleBugs.filter((b) => b.severity === 'critical' && b.status !== 'fixed' && b.status !== 'rejected').length
-
-  const stats = [
-    { label: 'Open', value: openCount, icon: CircleDot, color: 'text-red-500', bgClass: 'bg-red-500/10' },
-    { label: 'Under Review', value: reviewCount, icon: ArrowUpDown, color: 'text-amber-500', bgClass: 'bg-amber-500/10' },
-    { label: 'Fixed', value: fixedCount, icon: CheckCircle2, color: 'text-emerald-500', bgClass: 'bg-emerald-500/10' },
-    { label: 'Critical', value: criticalCount, icon: Flame, color: 'text-orange-500', bgClass: 'bg-orange-500/10' },
-  ]
-
-  // Handlers
   const handleReportBug = useCallback((data: BugFormData) => {
     const newBug: BugData = {
       id: `BUG-${String(bugs.length + 1).padStart(3, '0')}`,
       title: data.title,
       status: 'open',
       severity: data.severity,
-      assignee: 'Unassigned',
-      reporter: currentUser?.name || 'Unknown',
-      reporterEmail: currentUser?.email || '',
+      assignee: currentUser?.name ?? 'Unassigned',
+      reporter: currentUser?.name ?? 'Current User',
+      reporterEmail: currentUser?.email ?? '',
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
-      labels: ['bug', data.module.toLowerCase().replace(/\s+/g, '-')],
+      labels: [data.module.toLowerCase(), data.severity],
       module: data.module,
       description: data.description,
-      stepsToReproduce: data.stepsToReproduce.split('\n').filter((s) => s.trim()),
+      stepsToReproduce: data.stepsToReproduce ? data.stepsToReproduce.split('\n').filter((s) => s.trim()) : [],
       expectedBehavior: data.expectedBehavior,
       actualBehavior: data.actualBehavior,
       environment: data.environment,
@@ -900,34 +828,27 @@ export function BugsPage() {
       comments: [],
       attachments: [],
     }
-    setBugs((prev) => [newBug, ...prev])
-    toast({ title: 'Bug Reported', description: `${data.title} has been submitted as ${data.severity} severity.` })
+    setBugs((prev) => [...prev, newBug])
+    toast({ title: 'Bug Reported', description: `"${data.title}" has been logged.` })
   }, [bugs.length, currentUser, toast])
 
-  const handleStatusChange = useCallback((id: string, newStatus: BugStatus) => {
-    setBugs((prev) => prev.map((b) => b.id === id ? { ...b, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] } : b))
-    const statusLabel = statusConfig[newStatus].label
-    toast({ title: 'Status Updated', description: `Bug ${id} marked as ${statusLabel}.` })
+  const handleStatusChange = useCallback((id: string, status: BugStatus) => {
+    setBugs((prev) => prev.map((b) => b.id === id ? { ...b, status, updatedAt: new Date().toISOString().split('T')[0] } : b))
+    toast({ title: 'Status Updated', description: `Bug ${id} marked as ${statusConfig[status].label}.` })
   }, [toast])
 
   const handleDeleteBug = useCallback(() => {
     if (!deleteBug) return
     setBugs((prev) => prev.filter((b) => b.id !== deleteBug.id))
-    toast({ title: 'Bug Deleted', description: `${deleteBug.id} has been removed.`, variant: 'destructive' })
     setDeleteBug(null)
+    toast({ title: 'Bug Deleted', description: `"${deleteBug.title}" has been removed.` })
   }, [deleteBug, toast])
 
-  const handleExport = useCallback(() => {
-    const csv = ['ID,Title,Severity,Status,Module,Assignee,Reporter,Created,Updated'].concat(
-      visibleBugs.map((b) => `${b.id},"${b.title}",${b.severity},${b.status},${b.module},${b.assignee},${b.reporter},${b.createdAt},${b.updatedAt}`)
-    ).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = 'bug-tracker-export.csv'; a.click()
-    URL.revokeObjectURL(url)
-    toast({ title: 'Export Complete', description: 'Bug data exported as CSV.' })
-  }, [visibleBugs, toast])
+  if (loading) return <PageSkeleton />
+
+  const openCount = bugs.filter((b) => b.status === 'open').length
+  const criticalCount = bugs.filter((b) => b.severity === 'critical').length
+  const fixedCount = bugs.filter((b) => b.status === 'fixed').length
 
   const tabs: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'board', label: 'Board', icon: LayoutGrid },
@@ -936,44 +857,35 @@ export function BugsPage() {
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ]
 
-  // Resolution progress
-  const totalBugs = visibleBugs.length
-  const resolvedPct = totalBugs > 0 ? Math.round(((visibleBugs.filter((b) => b.status === 'fixed').length + visibleBugs.filter((b) => b.status === 'rejected').length) / totalBugs) * 100) : 0
-
-  if (loading) return <PageSkeleton />
-
   return (
-    <div className="min-h-screen flex flex-col gap-6 p-4 md:p-6">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: 'easeOut' as const }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Bug className="h-6 w-6 text-red-500" />
-              Bug Tracker
+              <Bug className="h-6 w-6 text-red-500" />Bug Tracker
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {currentUser?.isTester
-                ? `Report and track bugs found during testing — ${currentUser.name}`
-                : 'Track, prioritize, and resolve issues across all modules'}
-            </p>
+            <p className="text-muted-foreground text-sm mt-1">Track, manage, and resolve bugs across your projects</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="h-9" onClick={handleExport}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-            <Button className="h-9 bg-red-600 hover:bg-red-700 text-white" onClick={() => setReportOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />{currentUser?.isTester ? 'Report New Bug' : 'Report Bug'}
-            </Button>
-          </div>
+          <Button className="h-9 bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowReportDialog(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />Report Bug
+          </Button>
         </div>
       </motion.div>
 
-      {/* ── Quick Stats ────────────────────────────────────────────── */}
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+        {[
+          { label: 'Total Bugs', value: bugs.length, icon: Bug, color: 'text-red-500', bg: 'bg-red-500/10' },
+          { label: 'Open', value: openCount, icon: CircleDot, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Critical', value: criticalCount, icon: Flame, color: 'text-red-600', bg: 'bg-red-600/10' },
+          { label: 'Fixed', value: fixedCount, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.35, ease: 'easeOut' as const }}>
             <Card className="py-4">
               <CardContent className="flex items-center gap-4 px-4">
-                <div className={`rounded-lg p-2.5 ${stat.bgClass} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
+                <div className={`rounded-lg p-2.5 ${stat.bg} ${stat.color}`}><stat.icon className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className="text-2xl font-bold leading-tight">{stat.value}</p>
@@ -984,40 +896,25 @@ export function BugsPage() {
         ))}
       </div>
 
-      {/* ── Resolution Progress ────────────────────────────────────── */}
-      <Card className="py-3">
-        <CardContent className="px-4 flex items-center gap-4">
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-sm font-medium">Resolution Progress</p>
-              <p className="text-xs text-muted-foreground">{fixedCount + visibleBugs.filter((b) => b.status === 'rejected').length} of {totalBugs} resolved</p>
-            </div>
-            <Progress value={resolvedPct} className="h-2" />
-          </div>
-          <span className="text-lg font-bold text-emerald-500">{resolvedPct}%</span>
-        </CardContent>
-      </Card>
-
-      {/* ── Tab Switcher ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg w-fit">
+      {/* Tabs */}
+      <div className="flex gap-1 bg-muted/50 p-1 rounded-xl">
         {tabs.map((tab) => {
-          const TabIcon = tab.icon
+          const Icon = tab.icon
           return (
             <button
               key={tab.id}
-              onClick={() => tab.id === 'report' ? setReportOpen(true) : setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                activeTab === tab.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                activeTab === tab.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <TabIcon className="h-4 w-4" />
-              {tab.label}
+              <Icon className="h-3.5 w-3.5" />{tab.label}
             </button>
           )
         })}
       </div>
 
-      {/* ── Tab Content ────────────────────────────────────────────── */}
+      {/* Tab Content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -1026,31 +923,50 @@ export function BugsPage() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2, ease: 'easeOut' as const }}
         >
-          {activeTab === 'board' && (
-            <BoardTab bugs={visibleBugs} onView={(b) => { setViewBug(b); setViewOpen(true) }} onStatusChange={handleStatusChange} />
-          )}
-          {activeTab === 'list' && (
-            <ListTab
-              bugs={visibleBugs}
-              onView={(b) => { setViewBug(b); setViewOpen(true) }}
-              onStatusChange={handleStatusChange}
-              onDelete={(b) => { setDeleteBug(b); setDeleteOpen(true) }}
+          {activeTab === 'board' && bugs.length === 0 ? (
+            <PremiumEmptyState
+              icon={Bug}
+              title="No Bugs Reported"
+              description="Your bug tracker is clean. When issues arise, report them here to track resolution progress."
+              primaryCtaLabel="Report First Bug"
+              onPrimaryCta={() => setShowReportDialog(true)}
             />
+          ) : activeTab === 'board' ? (
+            <BoardTab bugs={bugs} onView={setSelectedBug} onStatusChange={handleStatusChange} />
+          ) : null}
+
+          {activeTab === 'list' && bugs.length === 0 ? (
+            <PremiumEmptyState
+              icon={Bug}
+              title="No Bugs Reported"
+              description="Your bug tracker is clean. When issues arise, report them here to track resolution progress."
+              primaryCtaLabel="Report First Bug"
+              onPrimaryCta={() => setShowReportDialog(true)}
+            />
+          ) : activeTab === 'list' ? (
+            <ListTab bugs={bugs} onView={setSelectedBug} onStatusChange={handleStatusChange} onDelete={setDeleteBug} />
+          ) : null}
+
+          {activeTab === 'report' && (
+            <ReportBugDialog open={showReportDialog} onOpenChange={setShowReportDialog} onSave={handleReportBug} />
           )}
-          {activeTab === 'analytics' && <AnalyticsTabView bugs={visibleBugs} />}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsTabView bugs={bugs} />
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {/* ── Dialogs ────────────────────────────────────────────────── */}
-      <ReportBugDialog key={`report-${reportOpen}`} open={reportOpen} onOpenChange={setReportOpen} onSave={handleReportBug} />
-      <BugDetailDialog key={viewBug?.id ?? 'none'} bug={viewBug} open={viewOpen} onOpenChange={setViewOpen} onStatusChange={handleStatusChange} />
+      {/* Always render dialogs for inline access */}
+      <ReportBugDialog open={showReportDialog} onOpenChange={setShowReportDialog} onSave={handleReportBug} />
+      <BugDetailDialog bug={selectedBug} open={!!selectedBug} onOpenChange={(o) => !o && setSelectedBug(null)} onStatusChange={handleStatusChange} />
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={!!deleteBug} onOpenChange={(o) => !o && setDeleteBug(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Bug Report</AlertDialogTitle>
+            <AlertDialogTitle>Delete Bug</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteBug?.id}: {deleteBug?.title}</strong>? This action cannot be undone.
+              Are you sure you want to delete &quot;{deleteBug?.title}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

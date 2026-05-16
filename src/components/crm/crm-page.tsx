@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { leadsData, pipelineStages, leadActivities, leadNotes } from '@/lib/data'
 import {
   Users,
   Mail,
@@ -77,6 +76,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast, toast } from '@/hooks/use-toast'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { PremiumEmptyState } from '@/components/shared/premium-empty-state'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Lead {
@@ -111,6 +111,16 @@ interface LocalNote {
 
 type SortKey = 'name' | 'company' | 'status' | 'score' | 'source' | 'value' | 'industry' | 'createdAt'
 type SortDir = 'asc' | 'desc'
+
+// ─── Pipeline Stages Config (local) ────────────────────────────────────────
+const pipelineStages = [
+  { id: 'new', name: 'New Leads', color: '#3b82f6' },
+  { id: 'contacted', name: 'Contacted', color: '#8b5cf6' },
+  { id: 'qualified', name: 'Qualified', color: '#f59e0b' },
+  { id: 'proposal', name: 'Proposal', color: '#10b981' },
+  { id: 'negotiation', name: 'Negotiation', color: '#ef4444' },
+  { id: 'won', name: 'Won', color: '#22c55e' },
+] as const
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function scoreColor(score: number) {
@@ -194,7 +204,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: 'easeInOut' as const },
+    transition: { duration: 0.35, ease: 'easeInOut' },
   },
 }
 
@@ -300,7 +310,7 @@ function ConversionAnalytics({ leads }: { leads: Lead[] }) {
             </div>
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Avg Deal Cycle</p>
-              <p className="text-lg font-bold">23 <span className="text-xs font-normal text-muted-foreground">days</span></p>
+              <p className="text-lg font-bold">0 <span className="text-xs font-normal text-muted-foreground">days</span></p>
             </div>
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Best Source</p>
@@ -839,14 +849,13 @@ function LeadDetailDialog({
 
   const leadActivityList = useMemo(() => {
     if (!lead) return []
-    return leadActivities.filter((a) => a.leadId === lead.id)
+    return [] as Array<{ id: string; type: string; description: string; timestamp: string; icon: string }>
   }, [lead])
 
   const leadNoteList = useMemo(() => {
     if (!lead) return []
-    const staticNotes = leadNotes.filter((n) => n.leadId === lead.id)
     const dynamicNotes = localNotes.filter((n) => n.leadId === lead.id)
-    return [...dynamicNotes, ...staticNotes]
+    return [...dynamicNotes]
   }, [lead, localNotes])
 
   if (!lead) return null
@@ -1675,8 +1684,8 @@ export function CRMPage() {
     return () => clearTimeout(t)
   }, [])
 
-  // Core state
-  const [leads, setLeads] = useState<Lead[]>(leadsData)
+  // Core state — starts empty (no mock data)
+  const [leads, setLeads] = useState<Lead[]>([])
   const [searchInput, search, setSearch] = useDebouncedSearch()
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -1779,6 +1788,61 @@ export function CRMPage() {
     showToast({ title: `Exported ${data.length} leads as CSV`, description: 'File downloaded as visionflow-crm-leads.csv' })
   }, [filteredLeads, showToast])
 
+  // CSV import handler
+  const handleCsvImport = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.csv'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        const lines = text.split('\n').filter(Boolean)
+        if (lines.length < 2) {
+          showToast({ title: 'Invalid CSV', description: 'The CSV file appears to be empty or has no data rows.', variant: 'destructive' })
+          return
+        }
+        const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
+        const imported: Lead[] = []
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
+          const name = values[headers.indexOf('Name')] || values[0] || 'Unknown'
+          const nameParts = name.trim().split(' ')
+          const avatar = nameParts.length >= 2
+            ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+            : name.trim().substring(0, 2).toUpperCase()
+          imported.push({
+            id: `lead-${Date.now()}-${i}`,
+            name,
+            email: values[headers.indexOf('Email')] || '—',
+            company: values[headers.indexOf('Company')] || '—',
+            title: values[headers.indexOf('Title')] || '—',
+            status: 'new',
+            score: 50,
+            source: values[headers.indexOf('Source')] || 'Import',
+            industry: values[headers.indexOf('Industry')] || 'Other',
+            value: values[headers.indexOf('Value')] || '$0K',
+            avatar,
+            phone: values[headers.indexOf('Phone')] || '—',
+            location: values[headers.indexOf('Location')] || '—',
+            website: values[headers.indexOf('Website')] || '—',
+            companySize: values[headers.indexOf('Company Size')] || '—',
+            revenue: values[headers.indexOf('Revenue')] || '—',
+            createdAt: new Date().toISOString().split('T')[0],
+            lastContact: 'Just now',
+            tags: values[headers.indexOf('Tags')] ? values[headers.indexOf('Tags')].split(';').map((t: string) => t.trim()).filter(Boolean) : [],
+          })
+        }
+        setLeads((prev) => [...imported, ...prev])
+        showToast({ title: `${imported.length} leads imported`, description: 'Leads have been imported from your CSV file and added as new leads.' })
+      } catch {
+        showToast({ title: 'Import failed', description: 'Could not parse the CSV file. Please check the format and try again.', variant: 'destructive' })
+      }
+    }
+    input.click()
+  }, [showToast])
+
   // Bulk action handler
   const handleBulkAction = useCallback((action: string, stageId?: string) => {
     const count = selectedIds.size
@@ -1816,6 +1880,56 @@ export function CRMPage() {
   }, [showToast])
 
   if (isLoading) return <CrmSkeleton />
+
+  // Empty state — show PremiumEmptyState when no leads
+  if (leads.length === 0) {
+    return (
+      <div className="flex flex-col gap-6 p-4 md:p-6 min-h-screen relative">
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <motion.div variants={containerVariants} initial="hidden" animate="visible">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Users className="h-6 w-6" />
+                CRM Pipeline
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage leads and track your sales pipeline
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" className="h-9 gap-1.5" onClick={() => setAddLeadOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add Lead
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* ── Stats (zeros) ────────────────────────────────────────── */}
+        <StatsBar leads={leads} />
+
+        {/* ── Empty State ──────────────────────────────────────────── */}
+        <PremiumEmptyState
+          icon={Users}
+          title="No Leads Yet"
+          description="Start building your pipeline by adding your first lead. You can also import contacts from CSV or connect your CRM."
+          primaryCtaLabel="Add First Lead"
+          onPrimaryCta={() => setAddLeadOpen(true)}
+          secondaryCtaLabel="Import from CSV"
+          onSecondaryCta={handleCsvImport}
+        />
+
+        {/* ── Add Lead Dialog ────────────────────────────────────────── */}
+        <AddLeadDialog
+          open={addLeadOpen}
+          onOpenChange={setAddLeadOpen}
+          onAddLead={handleAddLead}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6 min-h-screen relative">
@@ -1863,7 +1977,7 @@ export function CRMPage() {
               Export
             </Button>
 
-            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={handleCsvImport}>
               <Upload className="h-4 w-4" />
               Import
             </Button>

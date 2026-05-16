@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { projects as seedProjects } from '@/lib/data'
+import { PremiumEmptyState } from '@/components/shared/premium-empty-state'
 import {
   FolderOpen,
   Plus,
@@ -218,148 +218,6 @@ const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; className: string 
   done: { label: 'Done', className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' },
 }
 
-// ─── Seed Data ───────────────────────────────────────────────────────────────
-
-const teamPool: TeamMember[] = [
-  { id: 'tm1', name: 'Alice Kim', initials: 'AK', role: 'Project Lead' },
-  { id: 'tm2', name: 'Ben Torres', initials: 'BT', role: 'Developer' },
-  { id: 'tm3', name: 'Clara Yun', initials: 'CY', role: 'Designer' },
-  { id: 'tm4', name: 'Diana Patel', initials: 'DP', role: 'Designer' },
-  { id: 'tm5', name: 'Ethan Moss', initials: 'EM', role: 'Developer' },
-  { id: 'tm6', name: 'Fiona Wu', initials: 'FW', role: 'QA' },
-  { id: 'tm7', name: 'George Li', initials: 'GL', role: 'Developer' },
-  { id: 'tm8', name: 'Hannah Cole', initials: 'HC', role: 'PM' },
-  { id: 'tm9', name: 'Ian Park', initials: 'IP', role: 'Developer' },
-  { id: 'tm10', name: 'Julia Ren', initials: 'JR', role: 'Analyst' },
-]
-
-const initialProjects: ProjectData[] = [
-  {
-    id: 'p1', name: 'TechCorp Marketing Dashboard', client: 'TechCorp', type: 'analytics', status: 'in_progress', progress: 72, budget: 24000, spent: 16800, deadline: '2026-06-15', startDate: '2026-04-01', deliverables: 5, completedDeliverables: 3,
-    description: 'Build a comprehensive marketing analytics dashboard with real-time KPIs, campaign tracking, and AI-powered insights for TechCorp marketing team.',
-    tasks: [
-      { id: 't1', title: 'Design dashboard layout', description: 'Create wireframes and mockups for the main dashboard', status: 'done', priority: 'high', assigneeId: 'tm3', dueDate: '2026-04-15', createdAt: '2026-04-01', completedAt: '2026-04-14' },
-      { id: 't2', title: 'Integrate analytics API', description: 'Connect Google Analytics and Mixpanel data sources', status: 'done', priority: 'high', assigneeId: 'tm2', dueDate: '2026-04-25', createdAt: '2026-04-01', completedAt: '2026-04-24' },
-      { id: 't3', title: 'Build KPI widgets', description: 'Implement interactive KPI cards with real-time data', status: 'done', priority: 'medium', assigneeId: 'tm2', dueDate: '2026-05-05', createdAt: '2026-04-15', completedAt: '2026-05-04' },
-      { id: 't4', title: 'AI insights module', description: 'Develop AI-powered anomaly detection and recommendations', status: 'in_progress', priority: 'high', assigneeId: 'tm5', dueDate: '2026-05-25', createdAt: '2026-05-01', completedAt: null },
-      { id: 't5', title: 'Campaign tracking page', description: 'Build campaign performance comparison views', status: 'in_progress', priority: 'medium', assigneeId: 'tm7', dueDate: '2026-05-30', createdAt: '2026-05-05', completedAt: null },
-      { id: 't6', title: 'QA and deployment', description: 'Testing, bug fixes, and production deployment', status: 'todo', priority: 'urgent', assigneeId: 'tm6', dueDate: '2026-06-10', createdAt: '2026-05-15', completedAt: null },
-    ],
-    milestones: [
-      { id: 'm1', name: 'Requirements & Design', status: 'completed', dueDate: '2026-04-15', description: 'Gather requirements and finalize designs' },
-      { id: 'm2', name: 'Data Integration', status: 'completed', dueDate: '2026-05-01', description: 'Connect all data sources and APIs' },
-      { id: 'm3', name: 'Dashboard Build', status: 'current', dueDate: '2026-05-25', description: 'Build all dashboard components and widgets' },
-      { id: 'm4', name: 'QA & Deployment', status: 'upcoming', dueDate: '2026-06-15', description: 'Testing, client review, and production launch' },
-    ],
-    team: [teamPool[0], teamPool[1], teamPool[2]],
-    tags: ['analytics', 'dashboard', 'ai'], clientContact: 'Sarah Mitchell', clientEmail: 'sarah@techcorp.io', notes: 'Client wants emphasis on mobile responsiveness and real-time updates. Weekly check-in calls on Thursdays.', aiAssisted: true, createdAt: '2026-04-01', lastUpdated: '2 hours ago',
-  },
-  {
-    id: 'p2', name: 'Innovate Co Brand Identity', client: 'Innovate Co', type: 'design', status: 'review', progress: 90, budget: 48000, spent: 43200, deadline: '2026-05-30', startDate: '2026-03-01', deliverables: 8, completedDeliverables: 7,
-    description: 'Complete brand identity overhaul including logo, color system, typography, brand guidelines, and marketing collateral for Innovate Co.',
-    tasks: [
-      { id: 't7', title: 'Brand discovery workshop', description: 'Conduct brand values and personality workshop', status: 'done', priority: 'high', assigneeId: 'tm3', dueDate: '2026-03-10', createdAt: '2026-03-01', completedAt: '2026-03-09' },
-      { id: 't8', title: 'Logo design concepts', description: 'Create 3 logo concepts with variations', status: 'done', priority: 'high', assigneeId: 'tm4', dueDate: '2026-03-20', createdAt: '2026-03-05', completedAt: '2026-03-19' },
-      { id: 't9', title: 'Color & type system', description: 'Define primary/secondary colors and typography', status: 'done', priority: 'medium', assigneeId: 'tm3', dueDate: '2026-03-30', createdAt: '2026-03-10', completedAt: '2026-03-28' },
-      { id: 't10', title: 'Brand guidelines doc', description: 'Comprehensive brand guidelines PDF', status: 'done', priority: 'medium', assigneeId: 'tm4', dueDate: '2026-04-15', createdAt: '2026-03-20', completedAt: '2026-04-14' },
-      { id: 't11', title: 'Business card design', description: 'Design business cards with new branding', status: 'done', priority: 'low', assigneeId: 'tm3', dueDate: '2026-04-25', createdAt: '2026-04-01', completedAt: '2026-04-24' },
-      { id: 't12', title: 'Social media templates', description: 'Instagram, LinkedIn, and Twitter templates', status: 'done', priority: 'medium', assigneeId: 'tm4', dueDate: '2026-05-05', createdAt: '2026-04-10', completedAt: '2026-05-04' },
-      { id: 't13', title: 'Pitch deck template', description: 'Branded pitch deck with master slides', status: 'done', priority: 'high', assigneeId: 'tm3', dueDate: '2026-05-15', createdAt: '2026-04-20', completedAt: '2026-05-14' },
-      { id: 't14', title: 'Client review & revisions', description: 'Final review round with client feedback', status: 'in_progress', priority: 'urgent', assigneeId: 'tm4', dueDate: '2026-05-28', createdAt: '2026-05-15', completedAt: null },
-    ],
-    milestones: [
-      { id: 'm5', name: 'Brand Discovery', status: 'completed', dueDate: '2026-03-10', description: 'Brand values and positioning' },
-      { id: 'm6', name: 'Concept Design', status: 'completed', dueDate: '2026-04-01', description: 'Logo and visual concepts' },
-      { id: 'm7', name: 'Refinement', status: 'current', dueDate: '2026-05-15', description: 'Finalize all brand assets' },
-      { id: 'm8', name: 'Asset Delivery', status: 'upcoming', dueDate: '2026-05-30', description: 'Deliver all files and guidelines' },
-    ],
-    team: [teamPool[3], teamPool[2]],
-    tags: ['branding', 'design', 'identity'], clientContact: 'James Rodriguez', clientEmail: 'james@innovate.co', notes: 'Client prefers bold, modern aesthetic. CEO is directly involved in approval process.', aiAssisted: false, createdAt: '2026-03-01', lastUpdated: '1 day ago',
-  },
-  {
-    id: 'p3', name: 'DataFlow AI Pitch Deck', client: 'DataFlow AI', type: 'presentation', status: 'in_progress', progress: 45, budget: 8000, spent: 3200, deadline: '2026-06-01', startDate: '2026-05-01', deliverables: 3, completedDeliverables: 1,
-    description: 'Create a compelling investor pitch deck with data visualizations, market analysis, and product demo slides for DataFlow AI Series A raise.',
-    tasks: [
-      { id: 't15', title: 'Content strategy', description: 'Outline key messages and narrative arc', status: 'done', priority: 'high', assigneeId: 'tm8', dueDate: '2026-05-08', createdAt: '2026-05-01', completedAt: '2026-05-07' },
-      { id: 't16', title: 'Slide design', description: 'Design 15-20 pitch slides with visuals', status: 'in_progress', priority: 'high', assigneeId: 'tm3', dueDate: '2026-05-20', createdAt: '2026-05-05', completedAt: null },
-      { id: 't17', title: 'Data visualizations', description: 'Create charts and infographics for market data', status: 'todo', priority: 'medium', assigneeId: 'tm10', dueDate: '2026-05-25', createdAt: '2026-05-10', completedAt: null },
-    ],
-    milestones: [
-      { id: 'm9', name: 'Content Strategy', status: 'completed', dueDate: '2026-05-08', description: 'Finalize messaging and structure' },
-      { id: 'm10', name: 'Slide Design', status: 'current', dueDate: '2026-05-25', description: 'Design all slides' },
-      { id: 'm11', name: 'Review & Polish', status: 'upcoming', dueDate: '2026-06-01', description: 'Client review and final polish' },
-    ],
-    team: [teamPool[5], teamPool[6]],
-    tags: ['pitch-deck', 'investor', 'startup'], clientContact: 'Emily Chen', clientEmail: 'emily@dataflow.ai', notes: 'Series A raise targeting $5M. Need strong traction metrics visualization.', aiAssisted: true, createdAt: '2026-05-01', lastUpdated: '5 hours ago',
-  },
-  {
-    id: 'p4', name: 'GrowthLab Automation System', client: 'GrowthLab', type: 'automation', status: 'onboarding', progress: 15, budget: 36000, spent: 5400, deadline: '2026-07-20', startDate: '2026-05-10', deliverables: 12, completedDeliverables: 0,
-    description: 'End-to-end marketing automation system with lead scoring, email sequences, CRM integration, and AI-powered campaign optimization.',
-    tasks: [
-      { id: 't18', title: 'Requirements gathering', description: 'Document all automation needs and integrations', status: 'in_progress', priority: 'high', assigneeId: 'tm8', dueDate: '2026-05-25', createdAt: '2026-05-10', completedAt: null },
-      { id: 't19', title: 'System architecture', description: 'Design automation flow architecture', status: 'todo', priority: 'high', assigneeId: 'tm5', dueDate: '2026-06-01', createdAt: '2026-05-15', completedAt: null },
-      { id: 't20', title: 'CRM integration setup', description: 'Connect HubSpot and Salesforce', status: 'todo', priority: 'medium', assigneeId: 'tm2', dueDate: '2026-06-10', createdAt: '2026-05-15', completedAt: null },
-    ],
-    milestones: [
-      { id: 'm12', name: 'Scope Definition', status: 'current', dueDate: '2026-05-25', description: 'Finalize project scope and requirements' },
-      { id: 'm13', name: 'System Architecture', status: 'upcoming', dueDate: '2026-06-15', description: 'Design and approve system architecture' },
-      { id: 'm14', name: 'Implementation', status: 'upcoming', dueDate: '2026-07-10', description: 'Build all automation workflows' },
-      { id: 'm15', name: 'Testing & Launch', status: 'upcoming', dueDate: '2026-07-20', description: 'QA and go-live' },
-    ],
-    team: [teamPool[7], teamPool[8], teamPool[9]],
-    tags: ['automation', 'marketing', 'crm'], clientContact: 'Michael Park', clientEmail: 'michael@growthlab.com', notes: 'Client needs multi-channel automation with AI optimization. Budget approved for Q2.', aiAssisted: true, createdAt: '2026-05-10', lastUpdated: '3 hours ago',
-  },
-  {
-    id: 'p5', name: 'LegalWise CRM Setup', client: 'LegalWise', type: 'service', status: 'delivery', progress: 95, budget: 15000, spent: 14250, deadline: '2026-05-20', startDate: '2026-04-10', deliverables: 4, completedDeliverables: 4,
-    description: 'Complete CRM setup including contact migration, pipeline configuration, automated follow-ups, and team training for LegalWise law firm.',
-    tasks: [
-      { id: 't21', title: 'CRM configuration', description: 'Set up pipeline stages and automations', status: 'done', priority: 'high', assigneeId: 'tm1', dueDate: '2026-04-20', createdAt: '2026-04-10', completedAt: '2026-04-19' },
-      { id: 't22', title: 'Data migration', description: 'Migrate contacts from old system', status: 'done', priority: 'high', assigneeId: 'tm2', dueDate: '2026-04-30', createdAt: '2026-04-15', completedAt: '2026-04-29' },
-      { id: 't23', title: 'Team training', description: 'Train staff on CRM usage', status: 'done', priority: 'medium', assigneeId: 'tm1', dueDate: '2026-05-10', createdAt: '2026-05-01', completedAt: '2026-05-09' },
-      { id: 't24', title: 'Go-live support', description: 'Provide live support during first week', status: 'done', priority: 'medium', assigneeId: 'tm1', dueDate: '2026-05-20', createdAt: '2026-05-10', completedAt: '2026-05-18' },
-    ],
-    milestones: [
-      { id: 'm16', name: 'Configuration', status: 'completed', dueDate: '2026-04-20', description: 'CRM setup and config' },
-      { id: 'm17', name: 'Data Migration', status: 'completed', dueDate: '2026-04-30', description: 'Contact and history migration' },
-      { id: 'm18', name: 'Training', status: 'completed', dueDate: '2026-05-10', description: 'Team training sessions' },
-      { id: 'm19', name: 'Go Live', status: 'completed', dueDate: '2026-05-20', description: 'Launch and support' },
-    ],
-    team: [teamPool[0], teamPool[1]],
-    tags: ['crm', 'setup', 'training'], clientContact: 'Alex Turner', clientEmail: 'alex@legalwise.com', notes: 'Client very satisfied. Possible upsell for automation add-ons.', aiAssisted: false, createdAt: '2026-04-10', lastUpdated: '1 day ago',
-  },
-  {
-    id: 'p6', name: 'ScaleForce Website Redesign', client: 'ScaleForce', type: 'development', status: 'in_progress', progress: 60, budget: 56000, spent: 33600, deadline: '2026-06-30', startDate: '2026-03-15', deliverables: 10, completedDeliverables: 5,
-    description: 'Complete website redesign with modern UI/UX, performance optimization, SEO improvements, and AI-powered personalization for ScaleForce.',
-    tasks: [
-      { id: 't25', title: 'UX research & audit', description: 'Audit current site and user research', status: 'done', priority: 'high', assigneeId: 'tm3', dueDate: '2026-03-30', createdAt: '2026-03-15', completedAt: '2026-03-29' },
-      { id: 't26', title: 'Design system', description: 'Create component library and design tokens', status: 'done', priority: 'high', assigneeId: 'tm4', dueDate: '2026-04-10', createdAt: '2026-03-20', completedAt: '2026-04-09' },
-      { id: 't27', title: 'Homepage redesign', description: 'Redesign hero, features, pricing sections', status: 'done', priority: 'high', assigneeId: 'tm5', dueDate: '2026-04-25', createdAt: '2026-04-01', completedAt: '2026-04-24' },
-      { id: 't28', title: 'Product pages', description: 'Build all product/service pages', status: 'done', priority: 'medium', assigneeId: 'tm7', dueDate: '2026-05-10', createdAt: '2026-04-10', completedAt: '2026-05-09' },
-      { id: 't29', title: 'AI personalization', description: 'Implement AI-powered content personalization', status: 'done', priority: 'high', assigneeId: 'tm5', dueDate: '2026-05-20', createdAt: '2026-04-20', completedAt: '2026-05-19' },
-      { id: 't30', title: 'Blog & resources', description: 'Build blog and resource center', status: 'in_progress', priority: 'medium', assigneeId: 'tm7', dueDate: '2026-05-30', createdAt: '2026-05-01', completedAt: null },
-      { id: 't31', title: 'Performance optimization', description: 'Core Web Vitals and SEO optimization', status: 'todo', priority: 'high', assigneeId: 'tm2', dueDate: '2026-06-10', createdAt: '2026-05-15', completedAt: null },
-      { id: 't32', title: 'QA and launch', description: 'Cross-browser testing and deployment', status: 'todo', priority: 'urgent', assigneeId: 'tm6', dueDate: '2026-06-25', createdAt: '2026-05-20', completedAt: null },
-    ],
-    milestones: [
-      { id: 'm20', name: 'UX Research', status: 'completed', dueDate: '2026-03-30', description: 'Audit and user research' },
-      { id: 'm21', name: 'Design & Prototype', status: 'completed', dueDate: '2026-04-20', description: 'Design system and prototypes' },
-      { id: 'm22', name: 'Frontend Build', status: 'current', dueDate: '2026-05-30', description: 'Build all pages and features' },
-      { id: 'm23', name: 'Launch & Handoff', status: 'upcoming', dueDate: '2026-06-30', description: 'QA, launch, and training' },
-    ],
-    team: [teamPool[0], teamPool[1], teamPool[4]],
-    tags: ['website', 'redesign', 'ai'], clientContact: 'David Kim', clientEmail: 'david@scaleforce.io', notes: 'Enterprise client. High expectations for performance and AI features. Weekly demos required.', aiAssisted: true, createdAt: '2026-03-15', lastUpdated: '30 min ago',
-  },
-]
-
-const budgetChartData = [
-  { project: 'TechCorp', budget: 24, spent: 16.8 },
-  { project: 'Innovate Co', budget: 48, spent: 43.2 },
-  { project: 'DataFlow', budget: 8, spent: 3.2 },
-  { project: 'GrowthLab', budget: 36, spent: 5.4 },
-  { project: 'LegalWise', budget: 15, spent: 14.25 },
-  { project: 'ScaleForce', budget: 56, spent: 33.6 },
-]
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 let idCounter = 300
@@ -393,7 +251,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeInOut' as const } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeInOut" } },
 }
 
 // ─── Skeleton Loader ────────────────────────────────────────────────────────
@@ -1024,7 +882,7 @@ function BudgetOverviewTab({ data }: { data: ProjectData[] }) {
         <CardContent className="px-5 pb-5">
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={budgetChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={data.map((p) => ({ project: p.name.length > 10 ? p.name.substring(0, 10) + '...' : p.name, budget: Math.round(p.budget / 1000), spent: Math.round(p.spent / 1000) }))} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
                 <XAxis dataKey="project" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }} />
@@ -1090,7 +948,6 @@ export function ProjectsPage() {
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => {
-      setProjectList(initialProjects)
       setLoading(false)
     }, 800)
     return () => clearTimeout(timer)
@@ -1129,7 +986,7 @@ export function ProjectsPage() {
         description: data.description ?? '',
         tasks: [],
         milestones: [],
-        team: [teamPool[0]],
+        team: [],
         tags: data.tags ?? [],
         clientContact: data.clientContact ?? '',
         clientEmail: data.clientEmail ?? '',
@@ -1236,6 +1093,16 @@ export function ProjectsPage() {
         <StatsBar data={projectList} />
       </motion.div>
 
+      {projectList.length === 0 ? (
+        <PremiumEmptyState
+          icon={FolderOpen}
+          title="No Projects Yet"
+          description="Create your first project to start tracking deliverables, milestones, and team collaboration."
+          primaryCtaLabel="Create First Project"
+          onPrimaryCta={handleCreateProject}
+        />
+      ) : (
+      <>
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
@@ -1407,6 +1274,9 @@ export function ProjectsPage() {
           <BudgetOverviewTab data={filtered} />
         </TabsContent>
       </Tabs>
+
+      </>
+      )}
 
       {/* Project Detail Dialog */}
       <ProjectDetailDialog

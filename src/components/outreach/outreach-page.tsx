@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { campaigns as seedCampaigns } from '@/lib/data'
+import { PremiumEmptyState } from '@/components/shared/premium-empty-state'
 import {
   Send,
   Mail,
@@ -181,90 +181,10 @@ interface ContactTarget {
   status: 'targeted' | 'contacted' | 'replied' | 'converted'
 }
 
-// ─── Seed Data ───────────────────────────────────────────────────────────────
+// ─── Empty chart data placeholders ──────────────────────────────────────────
 
-const initialCampaigns: Campaign[] = seedCampaigns.map((c: { id: string; name: string; type: string; status: string; sent: number; opened: number; replied: number; converted: number; openRate: string; replyRate: string }) => ({
-  id: c.id,
-  name: c.name,
-  type: c.type as CampaignType,
-  status: c.status as CampaignStatus,
-  sent: c.sent,
-  opened: c.opened,
-  replied: c.replied,
-  converted: c.converted,
-  openRate: c.openRate,
-  replyRate: c.replyRate,
-  subject: c.name.includes('SaaS') ? 'Scale your SaaS with AI-powered automation' : c.name.includes('Agency') ? 'Grow your agency with smart automation' : c.name.includes('Fintech') ? 'Transform your fintech operations' : 'Re-engage with VisionFlow AI',
-  createdAt: '2026-04-15',
-  scheduledAt: c.status === 'active' ? '2026-05-15' : undefined,
-  targetList: 'SaaS Decision Makers',
-  bounceRate: '2.3%',
-  clickRate: '12.8%',
-  aiGenerated: c.type === 'multi_channel',
-}))
-
-const initialTemplates: Template[] = [
-  { id: 't1', name: 'SaaS Decision Maker', type: 'email', useCount: 342, preview: 'Hi {{firstName}}, I noticed {{company}} is scaling its marketing stack — our platform has helped similar SaaS teams reduce CAC by 35%...', subject: 'Scale your SaaS with AI-powered automation', category: 'Cold Outreach', aiGenerated: true, createdAt: '2026-03-10' },
-  { id: 't2', name: 'Agency Growth Pitch', type: 'linkedin', useCount: 218, preview: 'Hey {{firstName}}, saw your agency is growing fast — we work with agencies like {{company}} to automate client delivery and boost margins...', category: 'Warm Outreach', aiGenerated: true, createdAt: '2026-03-15' },
-  { id: 't3', name: 'Follow-Up Sequence', type: 'multi_channel', useCount: 567, preview: 'Multi-touch sequence: Email intro → LinkedIn connect → Value-add email → SMS nudge → Final CTA email. Optimized for 18% reply rate...', category: 'Follow-Up', aiGenerated: false, createdAt: '2026-04-01' },
-  { id: 't4', name: 'Enterprise Demo Invite', type: 'email', useCount: 189, preview: 'Hi {{firstName}}, I\'d love to show you how enterprises like {{company}} use VisionFlow to 3x their pipeline velocity. Can I book 15 min?', subject: '15-min demo: 3x your pipeline velocity', category: 'Demo', aiGenerated: true, createdAt: '2026-04-08' },
-  { id: 't5', name: 'Re-engagement Blast', type: 'email', useCount: 423, preview: 'We noticed you haven\'t explored VisionFlow AI yet — here\'s what 1,200+ companies are doing differently with AI outreach...', subject: 'What 1,200+ companies do differently', category: 'Re-engagement', aiGenerated: false, createdAt: '2026-04-12' },
-  { id: 't6', name: 'Social Proof Connector', type: 'linkedin', useCount: 156, preview: 'Hi {{firstName}}, just saw {{company}}\'s recent growth announcement — congrats! Companies at your stage typically face scaling challenges...', category: 'Warm Outreach', aiGenerated: true, createdAt: '2026-04-20' },
-]
-
-const initialSequences: Sequence[] = [
-  { id: 's1', name: 'Cold to Meeting', steps: [
-    { id: 'ss1', day: 1, label: 'Intro Email', channel: 'email', subject: 'Quick question about {{company}} growth', body: 'Hi {{firstName}}, ...' },
-    { id: 'ss2', day: 3, label: 'LinkedIn Connect', channel: 'linkedin', body: 'Hi {{firstName}}, would love to connect...' },
-    { id: 'ss3', day: 5, label: 'Value-add Email', channel: 'email', subject: 'Resource for {{company}}', body: 'Hi {{firstName}}, thought you might find this useful...' },
-    { id: 'ss4', day: 8, label: 'LinkedIn Message', channel: 'linkedin', body: 'Thanks for connecting! ...' },
-    { id: 'ss5', day: 12, label: 'Final CTA Email', channel: 'email', subject: 'Last thought for {{company}}', body: 'Hi {{firstName}}, just wanted to follow up...' },
-  ], status: 'active', contactsCount: 156, createdAt: '2026-03-01' },
-  { id: 's2', name: 'Warm Lead Nurture', steps: [
-    { id: 'ss6', day: 1, label: 'Welcome Email', channel: 'email', subject: 'Welcome to VisionFlow', body: 'Hi {{firstName}}, thanks for your interest...' },
-    { id: 'ss7', day: 2, label: 'SMS Nudge', channel: 'sms', body: 'Hey {{firstName}}, check your email for a special resource!' },
-    { id: 'ss8', day: 4, label: 'Value-add Email', channel: 'email', subject: 'Free resource for {{company}}', body: 'Hi {{firstName}}, ...' },
-    { id: 'ss9', day: 7, label: 'LinkedIn Engage', channel: 'linkedin', body: 'Great post on scaling, {{firstName}}...' },
-    { id: 'ss10', day: 10, label: 'CTA Email', channel: 'email', subject: 'Ready to scale {{company}}?', body: 'Hi {{firstName}}, ready to take the next step?' },
-  ], status: 'active', contactsCount: 89, createdAt: '2026-03-15' },
-  { id: 's3', name: 'Re-engagement Blast', steps: [
-    { id: 'ss11', day: 1, label: 'Re-engage Email', channel: 'email', subject: 'We miss you, {{firstName}}', body: 'It\'s been a while...' },
-    { id: 'ss12', day: 3, label: 'LinkedIn Reconnect', channel: 'linkedin', body: 'Hey {{firstName}}, long time no chat...' },
-    { id: 'ss13', day: 5, label: 'Offer SMS', channel: 'sms', body: 'Special offer inside, {{firstName}}!' },
-    { id: 'ss14', day: 7, label: 'Last Chance Email', channel: 'email', subject: 'Final chance: special offer for {{company}}', body: 'Last call, {{firstName}}...' },
-  ], status: 'paused', contactsCount: 234, createdAt: '2026-04-01' },
-]
-
-const contactTargets: ContactTarget[] = [
-  { id: 'ct1', name: 'Sarah Mitchell', email: 'sarah@techcorp.io', company: 'TechCorp', title: 'VP Marketing', industry: 'SaaS', score: 87, avatar: 'SM', lastContact: '2 days ago', tags: ['hot-lead', 'saas'], status: 'replied' },
-  { id: 'ct2', name: 'James Rodriguez', email: 'james@innovate.co', company: 'Innovate Co', title: 'CEO', industry: 'Fintech', score: 92, avatar: 'JR', lastContact: '1 day ago', tags: ['high-value', 'c-level'], status: 'converted' },
-  { id: 'ct3', name: 'Emily Chen', email: 'emily@dataflow.ai', company: 'DataFlow AI', title: 'CTO', industry: 'AI/ML', score: 65, avatar: 'EC', lastContact: 'Never', tags: ['ai-ml'], status: 'targeted' },
-  { id: 'ct4', name: 'Michael Park', email: 'michael@growthlab.com', company: 'GrowthLab', title: 'Head of Ops', industry: 'Marketing', score: 74, avatar: 'MP', lastContact: '5 days ago', tags: ['marketing'], status: 'contacted' },
-  { id: 'ct5', name: 'Lisa Thompson', email: 'lisa@designhub.io', company: 'DesignHub', title: 'Creative Director', industry: 'Design', score: 89, avatar: 'LT', lastContact: '3 hours ago', tags: ['hot-lead', 'design'], status: 'replied' },
-  { id: 'ct6', name: 'David Kim', email: 'david@scaleforce.io', company: 'ScaleForce', title: 'Founder', industry: 'SaaS', score: 95, avatar: 'DK', lastContact: '1 hour ago', tags: ['enterprise', 'saas'], status: 'converted' },
-  { id: 'ct7', name: 'Rachel Green', email: 'rachel@cloudops.co', company: 'CloudOps', title: 'VP Engineering', industry: 'Cloud', score: 58, avatar: 'RG', lastContact: 'Never', tags: ['cloud'], status: 'targeted' },
-  { id: 'ct8', name: 'Nina Patel', email: 'nina@healthfirst.io', company: 'HealthFirst', title: 'Director', industry: 'Healthcare', score: 82, avatar: 'NP', lastContact: '4 days ago', tags: ['healthcare'], status: 'contacted' },
-  { id: 'ct9', name: 'Kevin Zhang', email: 'kevin@quantumdata.ai', company: 'QuantumData', title: 'CTO', industry: 'AI/ML', score: 86, avatar: 'KZ', lastContact: '2 days ago', tags: ['ai-ml', 'c-level'], status: 'replied' },
-  { id: 'ct10', name: 'Aisha Mohammed', email: 'aisha@edulearn.com', company: 'EduLearn', title: 'CEO', industry: 'EdTech', score: 80, avatar: 'AM', lastContact: '1 day ago', tags: ['edtech', 'c-level'], status: 'contacted' },
-  { id: 'ct11', name: 'Marcus Johnson', email: 'marcus@finvault.com', company: 'FinVault', title: 'CFO', industry: 'Fintech', score: 84, avatar: 'MJ', lastContact: '6 hours ago', tags: ['fintech', 'high-value'], status: 'replied' },
-  { id: 'ct12', name: 'Sophie Laurent', email: 'sophie@luxbrand.co', company: 'LuxBrand', title: 'Brand Director', industry: 'Retail', score: 69, avatar: 'SL', lastContact: '3 days ago', tags: ['retail'], status: 'targeted' },
-]
-
-const campaignPerformanceData = [
-  { day: 'Mon', sent: 342, opened: 134, replied: 23 },
-  { day: 'Tue', sent: 456, opened: 189, replied: 34 },
-  { day: 'Wed', sent: 523, opened: 201, replied: 41 },
-  { day: 'Thu', sent: 489, opened: 178, replied: 38 },
-  { day: 'Fri', sent: 367, opened: 145, replied: 29 },
-  { day: 'Sat', sent: 123, opened: 48, replied: 8 },
-  { day: 'Sun', sent: 89, opened: 34, replied: 5 },
-]
-
-const channelPerformanceData = [
-  { channel: 'Email', sent: 4155, opened: 1808, replied: 301 },
-  { channel: 'LinkedIn', sent: 834, opened: 412, replied: 67 },
-  { channel: 'Multi-Channel', sent: 2156, opened: 892, replied: 156 },
-]
+const campaignPerformanceData: { day: string; sent: number; opened: number; replied: number }[] = []
+const channelPerformanceData: { channel: string; sent: number; opened: number; replied: number }[] = []
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -343,7 +263,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeInOut' as const } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeInOut" } },
 }
 
 // ─── Skeleton Loader ────────────────────────────────────────────────────────
@@ -637,7 +557,7 @@ function CampaignAnalyticsDialog({ campaign, open, onOpenChange }: { campaign: C
                       </div>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <motion.div className={`h-full rounded-full ${stage.color}`} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.1, ease: 'easeOut' }} />
+                      <motion.div className={`h-full rounded-full ${stage.color}`} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.1, ease: 'easeOut' as const }} />
                     </div>
                   </div>
                 )
@@ -760,6 +680,7 @@ function CampaignsTab({
   onToggleStatus,
   onDuplicate,
   onViewAnalytics,
+  onCreate,
 }: {
   data: Campaign[]
   onEdit: (c: Campaign) => void
@@ -767,6 +688,7 @@ function CampaignsTab({
   onToggleStatus: (c: Campaign) => void
   onDuplicate: (c: Campaign) => void
   onViewAnalytics: (c: Campaign) => void
+  onCreate: () => void
 }) {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterType, setFilterType] = useState<string>('all')
@@ -845,7 +767,15 @@ function CampaignsTab({
 
       {/* Campaign list */}
       <AnimatePresence mode="wait">
-        {paged.length > 0 ? (
+        {data.length === 0 ? (
+          <PremiumEmptyState
+            icon={Send}
+            title="No Campaigns Yet"
+            description="Launch your first outreach campaign to connect with prospects across email, LinkedIn, and multi-channel sequences."
+            primaryCtaLabel="Create First Campaign"
+            onPrimaryCta={onCreate}
+          />
+        ) : paged.length > 0 ? (
           <motion.div key="list" className="grid grid-cols-1 lg:grid-cols-2 gap-4" variants={containerVariants} initial="hidden" animate="visible">
             {paged.map((campaign) => (
               <CampaignCard
@@ -1112,7 +1042,15 @@ function TemplatesTab({
       </div>
 
       <AnimatePresence mode="wait">
-        {filtered.length > 0 ? (
+        {templates.length === 0 ? (
+          <PremiumEmptyState
+            icon={Mail}
+            title="No Templates Yet"
+            description="Create reusable outreach templates to streamline your email, LinkedIn, and multi-channel campaigns."
+            primaryCtaLabel="Create First Template"
+            onPrimaryCta={onCreate}
+          />
+        ) : filtered.length > 0 ? (
           <motion.div key="list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" variants={containerVariants} initial="hidden" animate="visible">
             {filtered.map((template) => (
               <TemplateCard key={template.id} template={template} onEdit={onEdit} onDelete={onDelete} onUse={onUse} />
@@ -1121,10 +1059,8 @@ function TemplatesTab({
         ) : (
           <motion.div key="empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-16 text-center">
             <div className="flex size-14 items-center justify-center rounded-2xl bg-muted mb-3"><Mail className="size-6 text-muted-foreground" /></div>
-            <p className="text-sm text-muted-foreground">No templates found</p>
-            <Button className="mt-4 h-9 bg-gradient-to-r from-primary to-vf-teal text-white" onClick={onCreate}>
-              <Plus className="size-4 mr-1.5" />Create Template
-            </Button>
+            <p className="text-sm text-muted-foreground">No templates match your filters</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Try adjusting your search or filters</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1310,30 +1246,28 @@ function SequencesTab({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button size="sm" className="h-9 gap-1.5 bg-gradient-to-r from-primary to-vf-teal text-white" onClick={onCreate}>
-          <Plus className="size-3.5" />New Sequence
-        </Button>
-      </div>
-      <motion.div className="space-y-4" variants={containerVariants} initial="hidden" animate="visible">
-        {sequences.map((sequence) => (
-          <SequenceCard key={sequence.id} sequence={sequence} onEdit={onEdit} onDelete={onDelete} />
-        ))}
-        {sequences.length === 0 && (
-          <motion.div variants={itemVariants}>
-            <Card className="border-dashed py-0">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-muted mb-3"><Zap className="size-6 text-muted-foreground" /></div>
-                <p className="text-sm font-medium text-muted-foreground">No sequences yet</p>
-                <p className="text-xs text-muted-foreground/60 mt-1 max-w-[300px]">Create multi-step outreach sequences across email, LinkedIn, and SMS channels</p>
-                <Button className="mt-4 h-9 bg-gradient-to-r from-primary to-vf-teal text-white" onClick={onCreate}>
-                  <Plus className="size-4 mr-1.5" />New Sequence
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </motion.div>
+      {sequences.length > 0 && (
+        <div className="flex items-center justify-end">
+          <Button size="sm" className="h-9 gap-1.5 bg-gradient-to-r from-primary to-vf-teal text-white" onClick={onCreate}>
+            <Plus className="size-3.5" />New Sequence
+          </Button>
+        </div>
+      )}
+      {sequences.length === 0 ? (
+        <PremiumEmptyState
+          icon={Zap}
+          title="No Sequences Yet"
+          description="Build multi-step outreach sequences across email, LinkedIn, and SMS to automate your follow-up cadences."
+          primaryCtaLabel="Create First Sequence"
+          onPrimaryCta={onCreate}
+        />
+      ) : (
+        <motion.div className="space-y-4" variants={containerVariants} initial="hidden" animate="visible">
+          {sequences.map((sequence) => (
+            <SequenceCard key={sequence.id} sequence={sequence} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </motion.div>
+      )}
     </div>
   )
 }
@@ -1387,6 +1321,14 @@ function ContactsTab({ contacts }: { contacts: ContactTarget[] }) {
 
   return (
     <div className="space-y-4">
+      {contacts.length === 0 ? (
+        <PremiumEmptyState
+          icon={Users}
+          title="No Contacts Yet"
+          description="Import or discover prospects to build your outreach contact list and start engaging with potential customers."
+        />
+      ) : (
+      <>
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex gap-3">
@@ -1492,6 +1434,8 @@ function ContactsTab({ contacts }: { contacts: ContactTarget[] }) {
           </div>
         </div>
       )}
+      </>
+      )}
     </div>
   )
 }
@@ -1506,6 +1450,16 @@ function AnalyticsTab({ campaigns }: { campaigns: Campaign[] }) {
   const overallOpenRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : '0'
   const overallReplyRate = totalSent > 0 ? ((totalReplied / totalSent) * 100).toFixed(1) : '0'
   const overallConversionRate = totalSent > 0 ? ((totalConverted / totalSent) * 100).toFixed(2) : '0'
+
+  if (campaigns.length === 0) {
+    return (
+      <PremiumEmptyState
+        icon={TrendingUp}
+        title="No Analytics Yet"
+        description="Start running outreach campaigns to see performance metrics, channel comparisons, and campaign rankings here."
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -1660,9 +1614,9 @@ function DeleteConfirmDialog({
 export function OutreachPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns)
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates)
-  const [sequences, setSequences] = useState<Sequence[]>(initialSequences)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [sequences, setSequences] = useState<Sequence[]>([])
 
   // Dialog states
   const [campaignFormOpen, setCampaignFormOpen] = useState(false)
@@ -1899,6 +1853,7 @@ export function OutreachPage() {
             onToggleStatus={handleToggleCampaignStatus}
             onDuplicate={handleDuplicateCampaign}
             onViewAnalytics={handleViewAnalytics}
+            onCreate={handleCreateCampaign}
           />
         </TabsContent>
 
@@ -1922,7 +1877,7 @@ export function OutreachPage() {
         </TabsContent>
 
         <TabsContent value="contacts" className="flex-1 mt-4">
-          <ContactsTab contacts={contactTargets} />
+          <ContactsTab contacts={[]} />
         </TabsContent>
 
         <TabsContent value="analytics" className="flex-1 mt-4">
