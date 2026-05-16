@@ -95,7 +95,7 @@ export function Hero() {
                   <motion.div
                     initial={false}
                     animate={{ rotate: theme === 'dark' ? 180 : 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' as const }}
                   >
                     {theme === 'dark' ? (
                       <Sun className="h-5 w-5" />

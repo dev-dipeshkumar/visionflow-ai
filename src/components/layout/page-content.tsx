@@ -69,7 +69,7 @@ export function PageContent() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
         className="flex-1 overflow-auto"
         id="main-content"
       >

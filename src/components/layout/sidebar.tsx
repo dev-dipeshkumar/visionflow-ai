@@ -117,7 +117,7 @@ export function Sidebar() {
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 'auto' }}
               exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.2, ease: 'easeInOut' as const }}
               className="overflow-hidden whitespace-nowrap text-base font-semibold text-sidebar-foreground"
             >
               VisionFlow AI
@@ -178,7 +178,7 @@ export function Sidebar() {
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: 'auto' }}
                       exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' as const }}
                       className="overflow-hidden whitespace-nowrap text-sm font-medium"
                     >
                       {item.label}
@@ -243,7 +243,7 @@ export function Sidebar() {
         >
           <motion.div
             animate={{ rotate: isCollapsed ? 180 : 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.2, ease: 'easeInOut' as const }}
           >
             <ChevronLeft className="h-5 w-5" />
           </motion.div>

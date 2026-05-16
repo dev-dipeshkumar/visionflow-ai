@@ -263,7 +263,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeInOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeInOut" as const } },
 }
 
 // ─── Skeleton Loader ────────────────────────────────────────────────────────

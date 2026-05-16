@@ -511,10 +511,13 @@ function OnboardingChecklist() {
               const StepIcon = step.icon
 
               return (
-                <motion.button
+                <motion.div
                   key={step.key}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleStepClick(step)}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStepClick(step) } }}
+                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left transition-colors cursor-pointer ${
                     isCompleted
                       ? 'bg-vf-emerald/5 hover:bg-vf-emerald/10'
                       : 'hover:bg-muted/60'
@@ -545,7 +548,7 @@ function OnboardingChecklist() {
                     <p className="text-xs text-muted-foreground truncate">{step.description}</p>
                   </div>
                   <ArrowRight className={`size-4 shrink-0 ${isCompleted ? 'text-vf-emerald' : 'text-muted-foreground/40'}`} />
-                </motion.button>
+                </motion.div>
               )
             })}
           </div>

@@ -40,7 +40,7 @@ export function PremiumEmptyState({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
+      transition={{ duration: 0.5, ease: 'easeOut' as const }}
       className="flex items-center justify-center py-16 px-4"
     >
       <Card className="relative max-w-lg w-full border-0 shadow-none bg-transparent">
@@ -49,7 +49,7 @@ export function PremiumEmptyState({
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.5, ease: 'easeOut' }}
+            transition={{ delay: 0.15, duration: 0.5, ease: 'easeOut' as const }}
             className="relative"
           >
             {/* Outer glow ring */}
@@ -68,7 +68,7 @@ export function PremiumEmptyState({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
+            transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' as const }}
             className="space-y-2 max-w-sm"
           >
             <h3 className="text-xl font-bold text-foreground">{title}</h3>
@@ -82,7 +82,7 @@ export function PremiumEmptyState({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45, duration: 0.4, ease: 'easeOut' }}
+              transition={{ delay: 0.45, duration: 0.4, ease: 'easeOut' as const }}
               className="flex items-center gap-3"
             >
               {primaryCtaLabel && onPrimaryCta && (

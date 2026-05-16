@@ -173,7 +173,7 @@ function FloatingParticle({ delay, x, size, duration }: { delay: number; x: numb
         duration,
         delay,
         repeat: Infinity,
-        ease: 'easeInOut',
+        ease: 'easeInOut' as const,
       }}
     />
   )
@@ -297,7 +297,7 @@ export function Workflow() {
                 background: 'linear-gradient(to bottom, transparent, oklch(0.65 0.19 160 / 60%), transparent)',
               }}
               animate={{ top: ['0%', '90%'] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'linear' as const }}
             />
           </div>
 

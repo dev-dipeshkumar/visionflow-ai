@@ -142,7 +142,7 @@ export function Header() {
     <motion.header
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      transition={{ duration: 0.3, ease: 'easeOut' as const }}
       className="sticky top-0 z-30 flex h-16 items-center border-b bg-background/80 backdrop-blur-md px-4 md:px-6"
     >
       {/* Left side */}
@@ -164,7 +164,7 @@ export function Header() {
             key={`title-${activePage}`}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+            transition={{ duration: 0.25, ease: 'easeOut' as const }}
             className="text-base font-semibold leading-tight truncate"
           >
             {title}
@@ -173,7 +173,7 @@ export function Header() {
             key={`subtitle-${activePage}`}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut', delay: 0.05 }}
+            transition={{ duration: 0.25, ease: 'easeOut' as const, delay: 0.05 }}
             className="text-xs text-muted-foreground leading-tight truncate hidden sm:block"
           >
             {subtitle}
@@ -226,7 +226,7 @@ export function Header() {
                 <motion.div
                   initial={false}
                   animate={{ rotate: theme === 'dark' ? 180 : 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' as const }}
                 >
                   {theme === 'dark' ? (
                     <Sun className="h-5 w-5" />
