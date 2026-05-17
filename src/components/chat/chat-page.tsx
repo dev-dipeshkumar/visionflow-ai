@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useAppStore } from '@/lib/store'
-import { chatMessages } from '@/lib/data'
 import { EmptyState } from '@/components/ui/empty-state'
 import {
   Send,
@@ -44,6 +43,17 @@ import {
   Pin,
   PanelRightOpen,
   PanelRightClose,
+  Upload,
+  MessageCircle,
+  LayoutTemplate,
+  AlertTriangle,
+  RefreshCw,
+  WifiOff,
+  Settings,
+  MousePointerClick,
+  TrendingUp,
+  Rocket,
+  Crosshair,
 } from 'lucide-react'
 import {
   Card,
@@ -80,6 +90,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
@@ -93,14 +110,12 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   time: string
-  /** For assistant messages that include code blocks */
   codeBlocks?: { language: string; code: string }[]
-  /** File attachments on user messages */
   attachments?: FileAttachment[]
-  /** Command that triggered this response (if any) */
   command?: string
-  /** Feedback given by user */
   feedback?: 'positive' | 'negative' | null
+  isError?: boolean
+  isOffline?: boolean
 }
 
 interface FileAttachment {
@@ -158,7 +173,53 @@ const AI_MODELS = [
   { id: 'claude-3', name: 'Claude 3 Opus', badge: 'Reasoning' },
 ]
 
-const promptTemplates: PromptTemplate[] = []
+const promptTemplates: PromptTemplate[] = [
+  {
+    id: 'summon-agent',
+    name: 'Summon Agent',
+    description: 'Activate an AI agent for autonomous tasks',
+    prompt: '/summon-agent ',
+    icon: Rocket,
+    category: 'sales',
+    color: 'text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/40',
+  },
+  {
+    id: 'target-leads',
+    name: 'Target Leads',
+    description: 'Find and score high-potential leads',
+    prompt: '/score-leads ',
+    icon: Crosshair,
+    category: 'sales',
+    color: 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40',
+  },
+  {
+    id: 'generate-campaign',
+    name: 'Generate Campaign',
+    description: 'Create a multi-channel outreach campaign',
+    prompt: '/run-outreach ',
+    icon: Zap,
+    category: 'marketing',
+    color: 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40',
+  },
+  {
+    id: 'analyze-revenue',
+    name: 'Analyze Revenue',
+    description: 'Revenue analytics and forecasting',
+    prompt: '/team-report ',
+    icon: TrendingUp,
+    category: 'analytics',
+    color: 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40',
+  },
+  {
+    id: 'start-workflow',
+    name: 'Start Workflow',
+    description: 'Design and launch automated workflows',
+    prompt: '/build-workflow ',
+    icon: Workflow,
+    category: 'dev',
+    color: 'text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-950/40',
+  },
+]
 
 const aiCommands: AICommand[] = [
   { name: '/find-leads', description: 'Search for new leads', icon: Search, preview: 'Finding leads...' },
@@ -167,6 +228,7 @@ const aiCommands: AICommand[] = [
   { name: '/run-outreach', description: 'Start outreach campaign', icon: Zap, preview: 'Starting outreach...' },
   { name: '/score-leads', description: 'Score and prioritize', icon: Target, preview: 'Scoring leads...' },
   { name: '/build-workflow', description: 'Design a workflow', icon: Workflow, preview: 'Building workflow...' },
+  { name: '/summon-agent', description: 'Activate an AI agent', icon: Rocket, preview: 'Summoning agent...' },
   { name: '/team-report', description: 'Team performance report', icon: Users, preview: 'Generating report...' },
   { name: '/help', description: 'Show all commands', icon: Command, preview: 'Loading help...' },
 ]
@@ -178,31 +240,54 @@ const activeAgents: { name: string; status: 'active' | 'paused'; color: string }
 const recentActivity: { text: string; time: string; type: 'agent' | 'action' | 'workflow' }[] = []
 
 // ---------------------------------------------------------------------------
-// Seed chat sessions
+// LocalStorage helpers
 // ---------------------------------------------------------------------------
 
-function createInitialSessions(): ChatSession[] {
+const STORAGE_KEY = 'visionflow-chat-sessions'
+const ACTIVE_SESSION_KEY = 'visionflow-active-session'
+
+function loadSessions(): ChatSession[] {
+  try {
+    if (typeof window === 'undefined') return []
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // ignore
+  }
   return []
 }
 
-// ---------------------------------------------------------------------------
-// Mock AI streaming responses
-// ---------------------------------------------------------------------------
+function saveSessions(sessions: ChatSession[]) {
+  try {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.slice(0, 50))) // limit to 50 sessions
+  } catch {
+    // ignore quota errors
+  }
+}
 
-const streamingResponses: Record<string, string> = {
-  default: "I've processed your request. How can I help you further?",
-  '/find-leads': "I'll find leads matching your criteria. Searching across available data sources...\n\nOnce I have results, I'll score and enrich them for you. Would you like me to start outreach to the top matches?",
-  '/generate-proposal': "Generating a personalized proposal based on the information provided...\n\nThe proposal will include recommended setup, pricing, and expected ROI. Shall I export this or schedule a presentation?",
-  '/analyze-pipeline': "Analyzing your current pipeline...\n\nI'll review conversion rates by stage, identify bottlenecks, and suggest actions to accelerate deals. Want me to take action on any findings?",
-  '/run-outreach': "Initiating outreach campaign...\n\nI'll set up a multi-channel sequence with personalized messaging. I'll track all interactions and update the CRM automatically.",
-  '/score-leads': "Scoring and prioritizing leads using multi-factor analysis...\n\nI'll evaluate all leads and categorize them by priority. Shall I start outreach to the top-scoring leads?",
-  '/build-workflow': "Designing your automated workflow...\n\nI'll create a workflow with appropriate triggers, conditions, and actions. Want me to set this up in the workflow builder?",
-  '/team-report': "Generating team performance report...\n\nThe report will include activity metrics, deal progress, and AI agent efficiency. Full report ready for export when complete.",
-  '/help': "Here are all available **AI Commands**:\n\n| Command | Description |\n|---------|-------------|\n| `/find-leads` | Search for new qualified leads |\n| `/generate-proposal` | Create a personalized proposal |\n| `/analyze-pipeline` | Pipeline analytics & insights |\n| `/run-outreach` | Start outreach campaigns |\n| `/score-leads` | Score and prioritize leads |\n| `/build-workflow` | Design automated workflows |\n| `/team-report` | Team performance report |\n| `/help` | Show this help message |\n\nYou can also just type naturally and I'll understand your intent. I have access to all your CRM data, agents, workflows, and analytics.",
+function loadActiveSessionId(): string {
+  try {
+    if (typeof window === 'undefined') return ''
+    return localStorage.getItem(ACTIVE_SESSION_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function saveActiveSessionId(id: string) {
+  try {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(ACTIVE_SESSION_KEY, id)
+  } catch {
+    // ignore
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Markdown renderer (simple but effective)
+// Markdown renderer
 // ---------------------------------------------------------------------------
 
 function renderMarkdown(text: string): React.ReactNode[] {
@@ -223,7 +308,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
         codeLines.push(lines[i])
         i++
       }
-      i++ // skip closing ```
+      i++
       result.push(
         <CodeBlock key={key++} language={language} code={codeLines.join('\n')} />
       )
@@ -274,7 +359,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
     if (line.startsWith('- ')) {
       result.push(
         <div key={key++} className="flex gap-2 ml-2 my-0.5">
-          <span className="text-muted-foreground shrink-0">•</span>
+          <span className="text-muted-foreground shrink-0">{'\u2022'}</span>
           <span className="text-foreground">{renderInline(line.slice(2))}</span>
         </div>
       )
@@ -303,7 +388,6 @@ function renderInline(text: string): React.ReactNode {
   let partKey = 0
 
   while (remaining.length > 0) {
-    // Bold
     const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
     if (boldMatch && boldMatch.index !== undefined) {
       if (boldMatch.index > 0) {
@@ -314,7 +398,6 @@ function renderInline(text: string): React.ReactNode {
       continue
     }
 
-    // Inline code
     const codeMatch = remaining.match(/`(.+?)`/)
     if (codeMatch && codeMatch.index !== undefined) {
       if (codeMatch.index > 0) {
@@ -329,7 +412,6 @@ function renderInline(text: string): React.ReactNode {
       continue
     }
 
-    // Italic
     const italicMatch = remaining.match(/\*(.+?)\*/)
     if (italicMatch && italicMatch.index !== undefined) {
       if (italicMatch.index > 0) {
@@ -533,17 +615,70 @@ function CommandPalette({
 }
 
 // ---------------------------------------------------------------------------
+// Plus button action modal
+// ---------------------------------------------------------------------------
+
+function PlusActionModal({
+  open,
+  onClose,
+  onAction,
+}: {
+  open: boolean
+  onClose: () => void
+  onAction: (action: string) => void
+}) {
+  const actions = [
+    { id: 'upload', label: 'Upload File', description: 'Attach a file to the conversation', icon: Upload, color: 'text-blue-500' },
+    { id: 'context', label: 'Add Context', description: 'Provide additional context for the AI', icon: MessageCircle, color: 'text-violet-500' },
+    { id: 'template', label: 'Choose Prompt Template', description: 'Select a pre-built prompt template', icon: LayoutTemplate, color: 'text-amber-500' },
+    { id: 'new-chat', label: 'Create New Chat', description: 'Start a fresh conversation', icon: Plus, color: 'text-emerald-500' },
+  ]
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="size-5 text-primary" />
+            Quick Actions
+          </DialogTitle>
+          <DialogDescription>
+            Choose an action to enhance your conversation
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-2">
+          {actions.map((action) => {
+            const ActionIcon = action.icon
+            return (
+              <button
+                key={action.id}
+                onClick={() => onAction(action.id)}
+                className="flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors hover:bg-muted/60"
+              >
+                <ActionIcon className={`size-5 ${action.color}`} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{action.label}</p>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main ChatPage component
 // ---------------------------------------------------------------------------
 
 export function ChatPage() {
-  const { currentUser } = useAppStore()
+  const { currentUser, setActivePage } = useAppStore()
   const { toast } = useToast()
 
-  // Sessions state
-  const [sessions, setSessions] = useState<ChatSession[]>(() =>
-    chatMessages.length > 0 ? createInitialSessions() : []
-  )
+  // Sessions state — initialized from localStorage
+  const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string>('')
   const [sessionSearch, setSessionSearch] = useState('')
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
@@ -558,6 +693,10 @@ export function ChatPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [feedbackMap, setFeedbackMap] = useState<Record<string, 'positive' | 'negative'>>({})
 
+  // Error state
+  const [lastError, setLastError] = useState<{ type: 'network' | 'api-key' | 'internal'; message: string } | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
+
   // UI state
   const [showSessions, setShowSessions] = useState(true)
   const [showContext, setShowContext] = useState(true)
@@ -566,12 +705,14 @@ export function ChatPage() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [selectedModel, setSelectedModel] = useState('gpt4')
   const [showModelPicker, setShowModelPicker] = useState(false)
+  const [showPlusModal, setShowPlusModal] = useState(false)
 
   // Skeleton loader
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const streamIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Active session
@@ -588,11 +729,26 @@ export function ChatPage() {
     return { pinned, recent }
   }, [sessions, sessionSearch])
 
-  // Simulate initial loading
+  // Initialize from localStorage on mount
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1200)
+    const savedSessions = loadSessions()
+    const savedActiveId = loadActiveSessionId()
+    if (savedSessions.length > 0) {
+      setSessions(savedSessions)
+      setActiveSessionId(savedActiveId && savedSessions.some(s => s.id === savedActiveId) ? savedActiveId : savedSessions[0].id)
+    }
+    setInitialized(true)
+    const t = setTimeout(() => setLoading(false), 600)
     return () => clearTimeout(t)
   }, [])
+
+  // Persist sessions to localStorage when they change
+  useEffect(() => {
+    if (initialized && sessions.length > 0) {
+      saveSessions(sessions)
+      saveActiveSessionId(activeSessionId)
+    }
+  }, [sessions, activeSessionId, initialized])
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -618,42 +774,132 @@ export function ChatPage() {
     return `${h}:${minutes} ${ampm}`
   }
 
-  // Streaming simulation
-  const simulateStreaming = useCallback((fullText: string, command?: string, targetSessionId?: string) => {
+  // ---------------------------------------------------------------------------
+  // AI API call
+  // ---------------------------------------------------------------------------
+  const callAI = useCallback(async (
+    messages: { role: string; content: string }[],
+    targetSessionId: string,
+    command?: string,
+  ) => {
+    setIsTyping(false)
     setIsStreaming(true)
     setStreamingText('')
-    let charIndex = 0
-    const charsPerTick = 3
-    const sessionId = targetSessionId || activeSessionId
+    setLastError(null)
 
-    streamIntervalRef.current = setInterval(() => {
-      charIndex += charsPerTick
-      if (charIndex >= fullText.length) {
-        if (streamIntervalRef.current) clearInterval(streamIntervalRef.current)
-        setStreamingText('')
-        setIsStreaming(false)
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          model: selectedModel,
+        }),
+      })
 
-        // Add the full message to the session
-        const aiMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: fullText,
-          time: getCurrentTime(),
-          command,
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+
+        if (errorData.error === 'MISSING_API_KEY') {
+          setIsStreaming(false)
+          setStreamingText('')
+          setLastError({ type: 'api-key', message: errorData.message || 'Connect Gemini API in Settings to enable live AI responses.' })
+          setIsOffline(true)
+
+          // Still add an offline response
+          const aiMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: errorData.message || 'Connect Gemini API in Settings to enable live AI responses.',
+            time: getCurrentTime(),
+            command,
+            isOffline: true,
+          }
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === targetSessionId
+                ? { ...s, messages: [...s.messages, aiMsg], updatedAt: getCurrentTime(), tokenCount: s.tokenCount + Math.ceil((errorData.message?.length || 0) / 4) }
+                : s
+            )
+          )
+          return
         }
 
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === sessionId
-              ? { ...s, messages: [...s.messages, aiMsg], updatedAt: getCurrentTime(), tokenCount: s.tokenCount + Math.ceil(fullText.length / 4) }
-              : s
-          )
-        )
-      } else {
-        setStreamingText(fullText.slice(0, charIndex))
+        throw new Error(errorData.message || `Server error: ${response.status}`)
       }
-    }, 20)
-  }, [activeSessionId])
+
+      const data = await response.json()
+
+      if (data.isOffline) {
+        setIsOffline(true)
+      } else {
+        setIsOffline(false)
+      }
+
+      // Simulate streaming for the response text
+      const fullText = data.message || 'I received your message but could not generate a response.'
+      let charIndex = 0
+      const charsPerTick = 3
+
+      streamIntervalRef.current = setInterval(() => {
+        charIndex += charsPerTick
+        if (charIndex >= fullText.length) {
+          if (streamIntervalRef.current) clearInterval(streamIntervalRef.current)
+          setStreamingText('')
+          setIsStreaming(false)
+
+          const aiMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: fullText,
+            time: getCurrentTime(),
+            command,
+            isOffline: data.isOffline || false,
+          }
+
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === targetSessionId
+                ? { ...s, messages: [...s.messages, aiMsg], updatedAt: getCurrentTime(), tokenCount: s.tokenCount + Math.ceil(fullText.length / 4) }
+                : s
+            )
+          )
+        } else {
+          setStreamingText(fullText.slice(0, charIndex))
+        }
+      }, 20)
+    } catch (error: unknown) {
+      setIsStreaming(false)
+      setStreamingText('')
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+      if (errorMessage.toLowerCase().includes('failed to fetch') ||
+          errorMessage.toLowerCase().includes('network') ||
+          errorMessage.toLowerCase().includes('connection')) {
+        setLastError({ type: 'network', message: 'Network error. Check your connection and try again.' })
+      } else {
+        setLastError({ type: 'internal', message: 'Something went wrong. Please try again.' })
+      }
+
+      // Add error message to chat
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `I encountered an error: ${errorMessage}. Please try again or use /help to see available commands.`,
+        time: getCurrentTime(),
+        command,
+        isError: true,
+      }
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === targetSessionId
+            ? { ...s, messages: [...s.messages, errorMsg], updatedAt: getCurrentTime() }
+            : s
+        )
+      )
+    }
+  }, [selectedModel])
 
   // Send message handler
   const handleSend = useCallback(() => {
@@ -670,15 +916,11 @@ export function ChatPage() {
       }
     }
 
-    // Parse for potential file attachments (mock)
-    const attachments: FileAttachment[] = []
-
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: text,
       time: getCurrentTime(),
-      attachments: attachments.length > 0 ? attachments : undefined,
     }
 
     // Add user message — create a new session if none exists
@@ -697,7 +939,7 @@ export function ChatPage() {
       targetSessionId = newId
       const newSession: ChatSession = {
         id: newId,
-        title: text.length > 40 ? text.slice(0, 40) + '…' : text,
+        title: text.length > 40 ? text.slice(0, 40) + '\u2026' : text,
         createdAt: getCurrentTime(),
         updatedAt: getCurrentTime(),
         pinned: false,
@@ -714,16 +956,43 @@ export function ChatPage() {
     setShowCommands(false)
     setIsTyping(true)
 
-    // Determine response
-    const responseKey = command || 'default'
-    const responseText = streamingResponses[responseKey] || streamingResponses.default
+    // Build messages array for API call
+    const existingMessages = activeSession?.messages?.map(m => ({ role: m.role, content: m.content })) || []
+    const allMessages = [...existingMessages, { role: 'user', content: text }]
 
-    // Show typing indicator, then stream
+    // Show typing indicator briefly, then call API
     setTimeout(() => {
-      setIsTyping(false)
-      simulateStreaming(responseText, command, targetSessionId)
-    }, 800)
-  }, [inputText, isTyping, isStreaming, activeSessionId, simulateStreaming, selectedModel])
+      callAI(allMessages, targetSessionId, command)
+    }, 400)
+  }, [inputText, isTyping, isStreaming, activeSessionId, activeSession, selectedModel, callAI])
+
+  // Retry last message
+  const handleRetry = useCallback(() => {
+    if (!activeSession) return
+    const messages = activeSession.messages
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === 'user')
+    if (lastUserIdx === -1) return
+    const realIdx = messages.length - 1 - lastUserIdx
+    const lastUserMsg = messages[realIdx]
+
+    // Remove any error messages after the last user message
+    const messagesToKeep = messages.slice(0, realIdx + 1)
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeSessionId
+          ? { ...s, messages: messagesToKeep }
+          : s
+      )
+    )
+    setLastError(null)
+
+    // Resend
+    const allMessages = messagesToKeep.map(m => ({ role: m.role, content: m.content }))
+    setIsTyping(true)
+    setTimeout(() => {
+      callAI(allMessages, activeSessionId)
+    }, 400)
+  }, [activeSession, activeSessionId, callAI])
 
   // Handle command selection
   const handleCommandSelect = (cmd: AICommand) => {
@@ -736,7 +1005,157 @@ export function ChatPage() {
   const handleTemplateSelect = (template: PromptTemplate) => {
     setInputText(template.prompt)
     setShowTemplates(false)
+    setShowPlusModal(false)
     inputRef.current?.focus()
+  }
+
+  // Handle quick action card click — auto-submit the command
+  const handleQuickAction = (template: PromptTemplate) => {
+    setInputText(template.prompt.trim())
+    // Use setTimeout to ensure state is updated before sending
+    setTimeout(() => {
+      const text = template.prompt.trim()
+      if (!text) return
+
+      let command: string | undefined
+      const matchedCommand = aiCommands.find((c) => text.startsWith(c.name))
+      if (matchedCommand) command = matchedCommand.name
+
+      const userMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: text,
+        time: getCurrentTime(),
+        command,
+      }
+
+      let targetSessionId = activeSessionId
+      setSessions((prev) => {
+        const existing = prev.find((s) => s.id === activeSessionId)
+        if (existing) {
+          return prev.map((s) =>
+            s.id === activeSessionId
+              ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime() }
+              : s
+          )
+        }
+        const newId = Date.now().toString()
+        targetSessionId = newId
+        const newSession: ChatSession = {
+          id: newId,
+          title: template.name,
+          createdAt: getCurrentTime(),
+          updatedAt: getCurrentTime(),
+          pinned: false,
+          unread: 0,
+          tags: [template.category],
+          model: AI_MODELS.find((m) => m.id === selectedModel)?.name || 'GPT-4',
+          tokenCount: 0,
+          messages: [userMsg],
+        }
+        setActiveSessionId(newId)
+        return [newSession, ...prev]
+      })
+      setInputText('')
+      setIsTyping(true)
+
+      const existingMessages = activeSession?.messages?.map(m => ({ role: m.role, content: m.content })) || []
+      const allMessages = [...existingMessages, { role: 'user', content: text }]
+
+      setTimeout(() => {
+        callAI(allMessages, targetSessionId, command)
+      }, 400)
+    }, 50)
+  }
+
+  // Handle suggested prompt click — auto-submit
+  const handleSuggestedPrompt = (prompt: string) => {
+    setInputText(prompt)
+    setTimeout(() => {
+      // Auto-send the suggested prompt
+      const userMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: prompt,
+        time: getCurrentTime(),
+      }
+
+      let targetSessionId = activeSessionId
+      setSessions((prev) => {
+        const existing = prev.find((s) => s.id === activeSessionId)
+        if (existing) {
+          return prev.map((s) =>
+            s.id === activeSessionId
+              ? { ...s, messages: [...s.messages, userMsg], updatedAt: getCurrentTime() }
+              : s
+          )
+        }
+        const newId = Date.now().toString()
+        targetSessionId = newId
+        const newSession: ChatSession = {
+          id: newId,
+          title: prompt.length > 40 ? prompt.slice(0, 40) + '\u2026' : prompt,
+          createdAt: getCurrentTime(),
+          updatedAt: getCurrentTime(),
+          pinned: false,
+          unread: 0,
+          tags: [],
+          model: AI_MODELS.find((m) => m.id === selectedModel)?.name || 'GPT-4',
+          tokenCount: 0,
+          messages: [userMsg],
+        }
+        setActiveSessionId(newId)
+        return [newSession, ...prev]
+      })
+      setInputText('')
+      setIsTyping(true)
+
+      const existingMessages = activeSession?.messages?.map(m => ({ role: m.role, content: m.content })) || []
+      const allMessages = [...existingMessages, { role: 'user', content: prompt }]
+
+      setTimeout(() => {
+        callAI(allMessages, targetSessionId)
+      }, 400)
+    }, 50)
+  }
+
+  // Handle plus button action
+  const handlePlusAction = (action: string) => {
+    setShowPlusModal(false)
+    switch (action) {
+      case 'upload':
+        // Create a hidden file input and trigger it
+        const fileInput = document.createElement('input')
+        fileInput.type = 'file'
+        fileInput.multiple = true
+        fileInput.accept = '.pdf,.xlsx,.csv,.png,.jpg,.jpeg,.doc,.docx'
+        fileInput.onchange = (e) => {
+          const files = (e.target as HTMLInputElement).files
+          if (files && files.length > 0) {
+            const fileNames = Array.from(files).map(f => f.name).join(', ')
+            toast({
+              title: 'Files selected',
+              description: `${fileNames} — File processing will be available when AI API is connected.`
+            })
+            // Pre-fill input with file reference
+            setInputText(prev => prev + (prev ? '\n' : '') + `[Attached: ${fileNames}]`)
+            inputRef.current?.focus()
+          }
+        }
+        fileInput.click()
+        break
+      case 'context':
+        setInputText('Context: ')
+        inputRef.current?.focus()
+        toast({ title: 'Add context', description: 'Type additional context for the AI after "Context:" to help it understand your request better.' })
+        break
+      case 'template':
+        setShowTemplates(true)
+        break
+      case 'new-chat':
+        handleNewChat()
+        break
+    }
   }
 
   // Create new session
@@ -762,13 +1181,21 @@ export function ChatPage() {
     }
     setSessions((prev) => [newSession, ...prev])
     setActiveSessionId(newSession.id)
+    setInputText('')
+    inputRef.current?.focus()
   }
 
   // Delete session
   const handleDeleteSession = (sessionId: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId))
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== sessionId)
+      // Also clear localStorage entry
+      saveSessions(remaining)
+      return remaining
+    })
     if (activeSessionId === sessionId) {
-      setActiveSessionId(sessions[0]?.id || '')
+      const remaining = sessions.filter((s) => s.id !== sessionId)
+      setActiveSessionId(remaining[0]?.id || '')
     }
     setDeleteSessionId(null)
     toast({ title: 'Chat deleted', description: 'The conversation has been removed.' })
@@ -811,7 +1238,6 @@ export function ChatPage() {
     if (lastAssistantIdx === -1) return
 
     const realIdx = activeSession.messages.length - 1 - lastAssistantIdx
-    const lastMsg = activeSession.messages[realIdx]
 
     // Remove last assistant message
     setSessions((prev) =>
@@ -822,18 +1248,19 @@ export function ChatPage() {
       )
     )
 
-    // Re-stream a different response
+    // Find the last user message to retry
+    const remainingMessages = activeSession.messages.filter((_, i) => i !== realIdx)
+    const allMessages = remainingMessages.map(m => ({ role: m.role, content: m.content }))
+
     setIsTyping(true)
+    setLastError(null)
     setTimeout(() => {
-      setIsTyping(false)
-      const responses = Object.values(streamingResponses)
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-      simulateStreaming(randomResponse, lastMsg?.command)
-    }, 800)
+      callAI(allMessages, activeSessionId)
+    }, 400)
   }
 
-  // Keyboard handler
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Keyboard handler for textarea
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -859,17 +1286,32 @@ export function ChatPage() {
     }
   }
 
-  // Mock file upload
-  const handleFileUpload = () => {
-    toast({ title: 'File upload', description: 'Drag and drop files or click to browse. Supported: PDF, XLSX, CSV, PNG, JPG (max 10MB)' })
-  }
+  // Auto-resize textarea
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = inputRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+    }
+  }, [])
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [inputText, adjustTextareaHeight])
 
   // Clear chat
   const handleClearChat = () => {
+    if (!activeSession) return
+    const welcomeMsg = activeSession.messages.find(m => m.role === 'assistant')
     setSessions((prev) =>
       prev.map((s) =>
         s.id === activeSessionId
-          ? { ...s, messages: [s.messages[0]], updatedAt: getCurrentTime(), tokenCount: 0 }
+          ? {
+              ...s,
+              messages: welcomeMsg ? [welcomeMsg] : [],
+              updatedAt: getCurrentTime(),
+              tokenCount: 0,
+            }
           : s
       )
     )
@@ -936,7 +1378,7 @@ export function ChatPage() {
         `}
         onClick={() => {
           setActiveSessionId(session.id)
-          // Clear unread
+          saveActiveSessionId(session.id)
           setSessions((prev) =>
             prev.map((s) => (s.id === session.id ? { ...s, unread: 0 } : s))
           )
@@ -968,7 +1410,7 @@ export function ChatPage() {
           )}
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="text-[10px] text-muted-foreground">{session.messages.length} msgs</span>
-            <span className="text-[10px] text-muted-foreground">·</span>
+            <span className="text-[10px] text-muted-foreground">{'\u00B7'}</span>
             <span className="text-[10px] text-muted-foreground">{session.updatedAt}</span>
           </div>
           {session.tags.length > 0 && (
@@ -982,19 +1424,16 @@ export function ChatPage() {
           )}
         </div>
 
-        {/* Unread badge */}
         {session.unread > 0 && (
           <Badge variant="destructive" className="h-4 min-w-[16px] px-1 text-[9px] font-bold shrink-0">
             {session.unread}
           </Badge>
         )}
 
-        {/* Pin indicator */}
         {session.pinned && (
           <Pin className="size-3 text-primary shrink-0 mt-1" />
         )}
 
-        {/* Action menu */}
         <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1023,6 +1462,8 @@ export function ChatPage() {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+
+  const hasNoMessages = !activeSession?.messages?.length && !isStreaming && !isTyping
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
@@ -1070,7 +1511,6 @@ export function ChatPage() {
             {/* Sessions list */}
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1">
-                {/* Pinned */}
                 {filteredSessions.pinned.length > 0 && (
                   <>
                     <p className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pinned</p>
@@ -1080,7 +1520,6 @@ export function ChatPage() {
                   </>
                 )}
 
-                {/* Recent */}
                 {filteredSessions.recent.length > 0 && (
                   <>
                     <p className="px-2.5 py-1 mt-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Recent</p>
@@ -1093,7 +1532,10 @@ export function ChatPage() {
                 {filteredSessions.pinned.length === 0 && filteredSessions.recent.length === 0 && (
                   <div className="py-8 text-center">
                     <MessageSquare className="size-8 mx-auto text-muted-foreground/50" />
-                    <p className="mt-2 text-xs text-muted-foreground">No chats found</p>
+                    <p className="mt-2 text-xs text-muted-foreground">No chats yet</p>
+                    <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={handleNewChat}>
+                      <Plus className="size-3 mr-1" /> Start a chat
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1142,12 +1584,21 @@ export function ChatPage() {
                 {activeSession?.title || 'AI Chat'}
               </h1>
               <div className="flex items-center gap-2">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-[11px] text-muted-foreground">Online</span>
-                <span className="text-[11px] text-muted-foreground">·</span>
+                {isOffline ? (
+                  <>
+                    <WifiOff className="size-2.5 text-amber-500" />
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400">Offline Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="relative flex size-2">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">Online</span>
+                  </>
+                )}
+                <span className="text-[11px] text-muted-foreground">{'\u00B7'}</span>
                 <span className="text-[11px] text-muted-foreground">{activeSession?.tokenCount.toLocaleString()} tokens</span>
               </div>
             </div>
@@ -1209,7 +1660,7 @@ export function ChatPage() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={handleClearChat}>
+                  <Button variant="ghost" size="icon" className="size-8" onClick={handleClearChat} disabled={!activeSession?.messages?.length}>
                     <RotateCcw className="size-4" />
                   </Button>
                 </TooltipTrigger>
@@ -1232,11 +1683,72 @@ export function ChatPage() {
         </div>
 
         {/* ============================================================ */}
+        {/* ERROR BANNER                                                  */}
+        {/* ============================================================ */}
+        <AnimatePresence>
+          {lastError && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className={`flex items-center gap-3 px-4 py-2 text-xs border-b ${
+                lastError.type === 'api-key'
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+                  : lastError.type === 'network'
+                  ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                  : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300'
+              }`}>
+                {lastError.type === 'api-key' ? (
+                  <Settings className="size-4 shrink-0" />
+                ) : lastError.type === 'network' ? (
+                  <WifiOff className="size-4 shrink-0" />
+                ) : (
+                  <AlertTriangle className="size-4 shrink-0" />
+                )}
+                <span className="flex-1">{lastError.message}</span>
+                {lastError.type === 'api-key' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1 shrink-0"
+                    onClick={() => {
+                      setActivePage('settings')
+                      setLastError(null)
+                    }}
+                  >
+                    <Settings className="size-3" /> Open Settings
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1 shrink-0"
+                    onClick={handleRetry}
+                  >
+                    <RefreshCw className="size-3" /> Retry
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-5 shrink-0"
+                  onClick={() => setLastError(null)}
+                >
+                  <X className="size-3" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ============================================================ */}
         {/* MESSAGES AREA                                                 */}
         {/* ============================================================ */}
         <ScrollArea ref={scrollRef} className="flex-1 px-4">
           <div className="mx-auto max-w-3xl space-y-4 py-6">
-            {chatMessages.length === 0 && !activeSession?.messages?.length && !isStreaming && !isTyping ? (
+            {hasNoMessages ? (
               <EmptyState
                 icon={MessageSquare}
                 title="Start a conversation"
@@ -1259,8 +1771,8 @@ export function ChatPage() {
                   {/* Avatar */}
                   {msg.role === 'assistant' ? (
                     <Avatar className="mt-1 size-8 shrink-0 border border-border">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Bot className="size-4" />
+                      <AvatarFallback className={msg.isError ? 'bg-red-10 text-red-500' : msg.isOffline ? 'bg-amber-10 text-amber-500' : 'bg-primary/10 text-primary'}>
+                        {msg.isError ? <AlertTriangle className="size-4" /> : <Bot className="size-4" />}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
@@ -1290,11 +1802,30 @@ export function ChatPage() {
                         {msg.content}
                       </div>
                     ) : (
-                      <Card className="border shadow-sm">
+                      <Card className={`border shadow-sm ${msg.isError ? 'border-red-200 dark:border-red-800' : msg.isOffline ? 'border-amber-200 dark:border-amber-800' : ''}`}>
                         <CardContent className="px-4 py-3">
                           <div className="text-sm leading-relaxed space-y-1">
                             {renderMarkdown(msg.content)}
                           </div>
+                          {msg.isOffline && (
+                            <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
+                              <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <WifiOff className="size-3" />
+                                Offline response — connect an AI API key for live answers
+                              </p>
+                            </div>
+                          )}
+                          {msg.isError && (
+                            <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800 flex items-center justify-between">
+                              <p className="text-[10px] text-red-600 dark:text-red-400 flex items-center gap-1">
+                                <AlertTriangle className="size-3" />
+                                Error generating response
+                              </p>
+                              <Button variant="ghost" size="sm" className="h-5 text-[10px] gap-1 text-red-600" onClick={handleRetry}>
+                                <RefreshCw className="size-3" /> Retry
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}
@@ -1317,7 +1848,7 @@ export function ChatPage() {
                       <span className="text-[10px] text-muted-foreground">
                         {msg.time}
                       </span>
-                      {msg.role === 'assistant' && (
+                      {msg.role === 'assistant' && !msg.isError && (
                         <div className="flex items-center gap-0.5">
                           <TooltipProvider>
                             <Tooltip>
@@ -1362,6 +1893,21 @@ export function ChatPage() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Not helpful</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-6 text-muted-foreground hover:text-foreground"
+                                  onClick={handleRegenerate}
+                                >
+                                  <RotateCcw className="size-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Regenerate</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
@@ -1417,12 +1963,12 @@ export function ChatPage() {
             >
               <div className="mx-auto max-w-3xl">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Prompt Templates</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
                   <Button variant="ghost" size="icon" className="size-7" onClick={() => setShowTemplates(false)}>
                     <X className="size-4" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {promptTemplates.map((template) => {
                     const TemplateIcon = template.icon
                     return (
@@ -1430,9 +1976,9 @@ export function ChatPage() {
                         key={template.id}
                         variant="ghost"
                         className={`flex h-auto flex-col items-center gap-1.5 rounded-xl px-2 py-3 ${template.color} transition-colors`}
-                        onClick={() => handleTemplateSelect(template)}
+                        onClick={() => handleQuickAction(template)}
                       >
-                        <TemplateIcon className="size-4" />
+                        <TemplateIcon className="size-5" />
                         <span className="text-[11px] font-medium leading-tight text-center">{template.name}</span>
                       </Button>
                     )
@@ -1446,7 +1992,7 @@ export function ChatPage() {
         {/* ============================================================ */}
         {/* SUGGESTED PROMPTS (visible when no messages)                  */}
         {/* ============================================================ */}
-        {chatMessages.length === 0 && !activeSession?.messages?.length && (
+        {hasNoMessages && (
           <div className="border-t px-4 pt-3 pb-1 shrink-0">
             <div className="mx-auto max-w-3xl">
               <div className="flex flex-wrap gap-2 justify-center">
@@ -1458,10 +2004,7 @@ export function ChatPage() {
                 ].map((prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => {
-                      setInputText(prompt)
-                      inputRef.current?.focus()
-                    }}
+                    onClick={() => handleSuggestedPrompt(prompt)}
                     className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                   >
                     <Sparkles className="size-3" />
@@ -1488,32 +2031,47 @@ export function ChatPage() {
               )}
             </AnimatePresence>
 
-            <div className="flex items-center gap-2 rounded-2xl border bg-card px-3 py-2 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/30">
+            <div className="flex items-end gap-2 rounded-2xl border bg-card px-3 py-2 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/30">
+              {/* Plus button — opens action modal */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground" onClick={handleFileUpload}>
-                      <Paperclip className="size-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPlusModal(true)}
+                      disabled={isTyping || isStreaming}
+                    >
+                      <Plus className="size-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Attach file</TooltipContent>
+                  <TooltipContent>Quick actions</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
-              <Input
+              {/* Textarea for multi-line input */}
+              <textarea
                 ref={inputRef}
                 value={inputText}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask VisionFlow AI to do anything... (type / for commands)"
-                className="flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
+                className="flex-1 resize-none border-0 bg-transparent px-1 text-sm leading-relaxed shadow-none focus:outline-none focus:ring-0 min-h-[24px] max-h-[120px] placeholder:text-muted-foreground disabled:opacity-50"
                 disabled={isTyping || isStreaming}
+                rows={1}
               />
 
+              {/* Mic button (placeholder) */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => toast({ title: 'Voice input', description: 'Voice input will be available in a future update.' })}
+                    >
                       <Mic className="size-4" />
                     </Button>
                   </TooltipTrigger>
@@ -1521,18 +2079,30 @@ export function ChatPage() {
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Send button */}
               <Button
                 size="icon"
                 className="size-9 shrink-0 rounded-xl bg-gradient-to-r from-primary to-vf-teal text-primary-foreground shadow-md hover:shadow-lg transition-shadow"
                 onClick={handleSend}
                 disabled={!inputText.trim() || isTyping || isStreaming}
               >
-                <Send className="size-4" />
+                {isStreaming ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' as const }}
+                  >
+                    <RefreshCw className="size-4" />
+                  </motion.div>
+                ) : (
+                  <Send className="size-4" />
+                )}
               </Button>
             </div>
             <div className="flex items-center justify-between mt-1.5">
               <p className="text-[10px] text-muted-foreground">
-                Press <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Enter</kbd> to send · <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">/</kbd> for commands · <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Esc</kbd> to close
+                Press <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Enter</kbd> to send{' '}
+                {'\u00B7'} <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">Shift+Enter</kbd> new line{' '}
+                {'\u00B7'} <kbd className="px-1 py-0.5 rounded bg-muted text-[9px] font-mono">/</kbd> commands
               </p>
               {isStreaming && (
                 <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-muted-foreground" onClick={() => {
@@ -1560,12 +2130,16 @@ export function ChatPage() {
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.25, ease: 'easeInOut' as const }}
           >
-            {/* Tabs: Context / Memory / Templates */}
+            {/* Tabs: Context / Memory / Agents */}
             <div className="flex border-b">
-              {(['Context', 'Memory', 'Agents'] as const).map((tab) => (
+              {(['Context', 'Memory', 'Agents'] as const).map((tab, tabIndex) => (
                 <button
                   key={tab}
-                  className="flex-1 px-2 py-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors border-b-2 border-transparent first:border-b-primary"
+                  className={`flex-1 px-2 py-2.5 text-[11px] font-medium transition-colors border-b-2 ${
+                    tabIndex === 0
+                      ? 'text-foreground border-b-primary'
+                      : 'text-muted-foreground hover:text-foreground border-transparent'
+                  }`}
                 >
                   {tab}
                 </button>
@@ -1585,33 +2159,59 @@ export function ChatPage() {
                     {activeAgents.filter(a => a.status === 'active').length} live
                   </Badge>
                 </div>
-                <div className="space-y-2">
-                  {activeAgents.map((agent) => (
-                    <div
-                      key={agent.name}
-                      className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
-                    >
-                      <span className="relative flex size-2.5">
-                        {agent.status === 'active' && (
-                          <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${agent.color}`} />
-                        )}
-                        <span className={`relative inline-flex size-2.5 rounded-full ${agent.color} ${agent.status === 'paused' ? 'opacity-50' : ''}`} />
-                      </span>
-                      <span className="flex-1 text-xs font-medium text-foreground">
-                        {agent.name}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={`px-1.5 py-0 text-[9px] font-normal ${
-                          agent.status === 'active'
-                            ? 'text-emerald-600 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/40'
-                            : 'text-amber-600 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950/40'
-                        }`}
+                {activeAgents.length > 0 ? (
+                  <div className="space-y-2">
+                    {activeAgents.map((agent) => (
+                      <div
+                        key={agent.name}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
                       >
-                        {agent.status === 'active' ? 'Running' : 'Paused'}
-                      </Badge>
-                    </div>
-                  ))}
+                        <span className="relative flex size-2.5">
+                          {agent.status === 'active' && (
+                            <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${agent.color}`} />
+                          )}
+                          <span className={`relative inline-flex size-2.5 rounded-full ${agent.color} ${agent.status === 'paused' ? 'opacity-50' : ''}`} />
+                        </span>
+                        <span className="flex-1 text-xs font-medium text-foreground">
+                          {agent.name}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`px-1.5 py-0 text-[9px] font-normal ${
+                            agent.status === 'active'
+                              ? 'text-emerald-600 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/40'
+                              : 'text-amber-600 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950/40'
+                          }`}
+                        >
+                          {agent.status === 'active' ? 'Running' : 'Paused'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground text-center py-3">
+                    No agents running. Use <code className="rounded bg-muted px-1 text-[10px]">/summon-agent</code> to start one.
+                  </p>
+                )}
+              </div>
+
+              {/* Quick Actions — populated from promptTemplates */}
+              <div className="border-b p-4">
+                <h3 className="mb-3 text-xs font-semibold text-foreground">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {promptTemplates.map((action) => {
+                    const ActionIcon = action.icon
+                    return (
+                      <button
+                        key={action.id}
+                        className={`flex flex-col items-center gap-1 rounded-lg px-1.5 py-2 transition-colors ${action.color}`}
+                        onClick={() => handleQuickAction(action)}
+                      >
+                        <ActionIcon className="size-4" />
+                        <span className="text-[10px] font-medium leading-tight text-center">{action.name}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -1624,71 +2224,62 @@ export function ChatPage() {
                     {aiMemoryItems.length} items
                   </Badge>
                 </div>
-                <div className="space-y-2">
-                  {aiMemoryItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
-                    >
-                      <div className={`
-                        mt-0.5 size-2 shrink-0 rounded-full
-                        ${item.source === 'conversation' ? 'bg-primary' : item.source === 'user-input' ? 'bg-vf-teal' : 'bg-vf-amber'}
-                      `} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold text-foreground">{item.key}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{item.value}</p>
-                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">{item.updatedAt}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="border-b p-4">
-                <h3 className="mb-3 text-xs font-semibold text-foreground">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {promptTemplates.slice(0, 4).map((action) => {
-                    const ActionIcon = action.icon
-                    return (
-                      <Button
-                        key={action.id}
-                        variant="ghost"
-                        className={`flex h-auto flex-col items-center gap-1 rounded-lg px-1.5 py-2 ${action.color} transition-colors`}
-                        onClick={() => handleTemplateSelect(action)}
+                {aiMemoryItems.length > 0 ? (
+                  <div className="space-y-2">
+                    {aiMemoryItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
                       >
-                        <ActionIcon className="size-3.5" />
-                        <span className="text-[10px] font-medium leading-tight">{action.name}</span>
-                      </Button>
-                    )
-                  })}
-                </div>
+                        <div className={`
+                          mt-0.5 size-2 shrink-0 rounded-full
+                          ${item.source === 'conversation' ? 'bg-primary' : item.source === 'user-input' ? 'bg-vf-teal' : 'bg-vf-amber'}
+                        `} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-semibold text-foreground">{item.key}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{item.value}</p>
+                          <p className="text-[9px] text-muted-foreground/60 mt-0.5">{item.updatedAt}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground text-center py-3">
+                    Memory items will appear as you chat with the AI.
+                  </p>
+                )}
               </div>
 
               {/* Recent Activity */}
               <div className="p-4">
                 <h3 className="mb-3 text-xs font-semibold text-foreground">Recent Activity</h3>
-                <div className="space-y-2.5">
-                  {recentActivity.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
-                    >
-                      <div className={`
-                        mt-0.5 size-1.5 shrink-0 rounded-full
-                        ${item.type === 'agent' ? 'bg-emerald-500' : item.type === 'workflow' ? 'bg-vf-teal' : 'bg-primary'}
-                      `} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] leading-snug text-foreground">
-                          {item.text}
-                        </p>
-                        <p className="mt-0.5 text-[9px] text-muted-foreground">
-                          {item.time}
-                        </p>
+                {recentActivity.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {recentActivity.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+                      >
+                        <div className={`
+                          mt-0.5 size-1.5 shrink-0 rounded-full
+                          ${item.type === 'agent' ? 'bg-emerald-500' : item.type === 'workflow' ? 'bg-vf-teal' : 'bg-primary'}
+                        `} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] leading-snug text-foreground">
+                            {item.text}
+                          </p>
+                          <p className="mt-0.5 text-[9px] text-muted-foreground">
+                            {item.time}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground text-center py-3">
+                    Activity will appear here as you use the AI.
+                  </p>
+                )}
               </div>
             </ScrollArea>
 
@@ -1705,6 +2296,15 @@ export function ChatPage() {
           </motion.aside>
         )}
       </AnimatePresence>
+
+      {/* ================================================================ */}
+      {/* PLUS BUTTON ACTION MODAL                                         */}
+      {/* ================================================================ */}
+      <PlusActionModal
+        open={showPlusModal}
+        onClose={() => setShowPlusModal(false)}
+        onAction={handlePlusAction}
+      />
 
       {/* ================================================================ */}
       {/* DELETE SESSION DIALOG                                             */}
