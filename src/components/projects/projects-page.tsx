@@ -151,7 +151,7 @@ interface Milestone {
   id: string
   name: string
   status: 'completed' | 'current' | 'upcoming'
-  dueDate: string
+  dueDate: string | null
   description: string
 }
 
@@ -164,8 +164,8 @@ interface ProjectData {
   progress: number
   budget: number
   spent: number
-  deadline: string
-  startDate: string
+  deadline: string | null
+  startDate: string | null
   deliverables: number
   completedDeliverables: number
   description: string
@@ -236,12 +236,23 @@ function formatBudget(amount: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+/** Check if a date string is a valid, parseable date */
+function isValidDate(dateStr: string | null | undefined): dateStr is string {
+  if (!dateStr || typeof dateStr !== 'string' || dateStr.trim() === '') return false
+  const d = new Date(dateStr)
+  return !isNaN(d.getTime())
 }
 
-function daysUntil(dateStr: string) {
-  const diff = new Date(dateStr).getTime() - Date.now()
+/** Safely format a date string. Returns fallback if invalid/empty. */
+function formatDate(dateStr: string | null | undefined, fallback = 'No deadline'): string {
+  if (!isValidDate(dateStr)) return fallback
+  return new Date(dateStr!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Safely compute days until a date. Returns null if invalid/empty. */
+function daysUntil(dateStr: string | null | undefined): number | null {
+  if (!isValidDate(dateStr)) return null
+  const diff = new Date(dateStr!).getTime() - Date.now()
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
@@ -351,9 +362,15 @@ function ProjectCard({
   const pColor = progressColor(project.progress)
   const TypeIcon = typeConf.icon
   const days = daysUntil(project.deadline)
-  const isOverdue = days < 0
-  const isUrgent = days >= 0 && days <= 7
+  const isOverdue = days !== null && days < 0
+  const isUrgent = days !== null && days >= 0 && days <= 7
   const completedTasks = project.tasks.filter((t) => t.status === 'done').length
+
+  // Determine deadline display text and color
+  const deadlineDisplay = days !== null
+    ? (isOverdue ? `${Math.abs(days)}d overdue` : isUrgent ? `${days}d left` : formatDate(project.deadline))
+    : (project.deadline === null ? 'No deadline' : 'Date not set')
+  const deadlineColor = isOverdue ? 'text-red-500' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'
 
   return (
     <motion.div
@@ -405,9 +422,9 @@ function ProjectCard({
               <DollarSign className="h-3 w-3" />
               <span>{formatBudget(project.spent)}/{formatBudget(project.budget)}</span>
             </div>
-            <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'}`}>
+            <div className={`flex items-center gap-1 ${deadlineColor}`}>
               <Calendar className="h-3 w-3" />
-              <span>{isOverdue ? `${Math.abs(days)}d overdue` : isUrgent ? `${days}d left` : formatDate(project.deadline)}</span>
+              <span>{deadlineDisplay}</span>
             </div>
           </div>
 
@@ -460,6 +477,7 @@ function ProjectDetailDialog({
   const completedTasks = project.tasks.filter((t) => t.status === 'done').length
   const todoTasks = project.tasks.filter((t) => t.status === 'todo').length
   const inProgressTasks = project.tasks.filter((t) => t.status === 'in_progress').length
+  const daysValue = days !== null ? (days < 0 ? 'Overdue' : String(days)) : 'N/A'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -522,7 +540,7 @@ function ProjectDetailDialog({
                     { label: 'Progress', value: `${project.progress}%`, icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-500/15' },
                     { label: 'Budget Used', value: formatBudget(project.spent), icon: DollarSign, color: 'text-teal-500', bg: 'bg-teal-500/15' },
                     { label: 'Tasks Done', value: `${completedTasks}/${project.tasks.length}`, icon: CheckCircle2, color: 'text-blue-500', bg: 'bg-blue-500/15' },
-                    { label: 'Days Left', value: days < 0 ? 'Overdue' : String(days), icon: Clock, color: days <= 7 ? 'text-amber-500' : 'text-vf-violet', bg: days <= 7 ? 'bg-amber-500/15' : 'bg-vf-violet/15' },
+                    { label: 'Days Left', value: daysValue, icon: Clock, color: (days !== null && days <= 7) ? 'text-amber-500' : 'text-vf-violet', bg: (days !== null && days <= 7) ? 'bg-amber-500/15' : 'bg-vf-violet/15' },
                   ].map((m) => (
                     <div key={m.label} className="rounded-xl border p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -567,8 +585,8 @@ function ProjectDetailDialog({
                   </div>
                   <div className="rounded-xl border p-4">
                     <h4 className="text-sm font-semibold mb-2">Timeline</h4>
-                    <p className="text-xs text-muted-foreground">Started: {formatDate(project.startDate)}</p>
-                    <p className="text-xs text-muted-foreground">Deadline: {formatDate(project.deadline)}</p>
+                    <p className="text-xs text-muted-foreground">Started: {formatDate(project.startDate, 'Not set')}</p>
+                    <p className="text-xs text-muted-foreground">Deadline: {formatDate(project.deadline, 'No deadline')}</p>
                     <p className="text-xs text-muted-foreground">Last updated: {project.lastUpdated}</p>
                   </div>
                 </div>
@@ -624,7 +642,7 @@ function ProjectDetailDialog({
                           {assignee && (
                             <Avatar className="h-5 w-5"><AvatarFallback className="text-[8px]">{assignee.initials}</AvatarFallback></Avatar>
                           )}
-                          {task.dueDate && (
+                          {task.dueDate && isValidDate(task.dueDate) && (
                             <span className="text-[10px] text-muted-foreground">{formatDate(task.dueDate)}</span>
                           )}
                         </div>
@@ -663,7 +681,7 @@ function ProjectDetailDialog({
                           {milestone.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">{milestone.description}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">Due: {formatDate(milestone.dueDate)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Due: {formatDate(milestone.dueDate, 'Date not set')}</p>
                       </div>
                     </div>
                   )
@@ -722,6 +740,7 @@ function ProjectFormDialog({
   const [type, setType] = useState<ProjectType>(project?.type ?? 'service')
   const [budget, setBudget] = useState(project ? String(project.budget) : '')
   const [deadline, setDeadline] = useState(project?.deadline ?? '')
+  const [deadlineError, setDeadlineError] = useState<string | null>(null)
   const [description, setDescription] = useState(project?.description ?? '')
   const [clientContact, setClientContact] = useState(project?.clientContact ?? '')
   const [clientEmail, setClientEmail] = useState(project?.clientEmail ?? '')
@@ -729,12 +748,18 @@ function ProjectFormDialog({
 
   function handleSave() {
     if (!name.trim() || !client.trim()) return
+    // Validate deadline: if provided, must be a valid date
+    if (deadline && !isValidDate(deadline)) {
+      setDeadlineError('Please enter a valid date or leave empty.')
+      return
+    }
+    setDeadlineError(null)
     onSave({
       name: name.trim(),
       client: client.trim(),
       type,
       budget: Number(budget) || 0,
-      deadline,
+      deadline: deadline.trim() || null,
       description: description.trim(),
       clientContact: clientContact.trim(),
       clientEmail: clientEmail.trim(),
@@ -779,8 +804,9 @@ function ProjectFormDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="p-deadline">Deadline</Label>
-            <Input id="p-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <Label htmlFor="p-deadline">Deadline <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input id="p-deadline" type="date" value={deadline} onChange={(e) => { setDeadline(e.target.value); setDeadlineError(null) }} />
+            {deadlineError && <p className="text-xs text-destructive">{deadlineError}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="p-desc">Description</Label>
@@ -989,7 +1015,7 @@ export function ProjectsPage() {
         progress: 0,
         budget: data.budget ?? 0,
         spent: 0,
-        deadline: data.deadline ?? new Date().toISOString().split('T')[0],
+        deadline: data.deadline ?? null,
         startDate: new Date().toISOString().split('T')[0],
         deliverables: 0,
         completedDeliverables: 0,
@@ -1187,9 +1213,15 @@ export function ProjectsPage() {
               const pColor = progressColor(project.progress)
               const TypeIcon = typeConf.icon
               const days = daysUntil(project.deadline)
-              const isOverdue = days < 0
-              const isUrgent = days >= 0 && days <= 7
+              const isOverdue = days !== null && days < 0
+              const isUrgent = days !== null && days >= 0 && days <= 7
               const completedTasks = project.tasks.filter((t) => t.status === 'done').length
+
+              // Determine deadline display for list view
+              const listDeadlineDisplay = days !== null
+                ? (isOverdue ? `${Math.abs(days)}d overdue` : isUrgent ? `${days}d left` : formatDate(project.deadline))
+                : (project.deadline === null ? 'No deadline' : 'Date not set')
+              const listDeadlineColor = isOverdue ? 'text-red-500' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'
 
               return (
                 <motion.div
@@ -1227,9 +1259,9 @@ export function ProjectsPage() {
                         <DollarSign className="size-3 text-muted-foreground" />
                         <span>{formatBudget(project.budget)}</span>
                       </div>
-                      <div className={`hidden md:flex items-center gap-1 text-xs shrink-0 ${isOverdue ? 'text-red-500' : isUrgent ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                      <div className={`hidden md:flex items-center gap-1 text-xs shrink-0 ${listDeadlineColor}`}>
                         <Calendar className="size-3" />
-                        <span>{isOverdue ? `${Math.abs(days)}d overdue` : isUrgent ? `${days}d left` : formatDate(project.deadline)}</span>
+                        <span>{listDeadlineDisplay}</span>
                       </div>
                       <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

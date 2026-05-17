@@ -72,3 +72,31 @@ Stage Summary:
 - Chat sessions persist in localStorage across page refreshes
 - Error states properly handled with retry and settings navigation
 - No fake AI responses — real API when available, clear offline mode when not
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix Project Invalid Date Bug — VisionFlow AI
+
+Work Log:
+- Analyzed projects-page.tsx (1,316 lines) — identified root cause: `formatDate()` and `daysUntil()` pass raw strings to `new Date()` without validation
+- Updated `ProjectData.deadline` and `ProjectData.startDate` types from `string` to `string | null`
+- Updated `Milestone.dueDate` type from `string` to `string | null`
+- Created `isValidDate()` helper — validates date strings before parsing (handles empty, null, undefined, invalid)
+- Rewrote `formatDate()` — accepts nullable input, returns configurable fallback ("No deadline" default)
+- Rewrote `daysUntil()` — returns `number | null` instead of `number`, null for invalid/empty dates
+- Fixed ProjectCard deadline display — safe conditional logic: overdue/urgency checks use `days !== null`, "No deadline" / "Date not set" fallbacks
+- Fixed ProjectDetailDialog — Timeline section uses `formatDate(startDate, 'Not set')` and `formatDate(deadline, 'No deadline')`
+- Fixed ProjectDetailDialog — "Days Left" metric shows "N/A" when deadline is null
+- Fixed milestone due dates — `formatDate(milestone.dueDate, 'Date not set')`
+- Fixed task due dates — `isValidDate(task.dueDate)` guard before rendering
+- Fixed List View deadline column — same safe logic as kanban cards
+- Fixed ProjectFormDialog — deadline labeled "(optional)", added `deadlineError` state, validates date on save
+- Fixed handleSaveProject — normalizes empty deadline string to `null` (was previously storing empty string or today's date as fallback)
+- Build passes cleanly with zero TypeScript errors
+
+Stage Summary:
+- "Invalid Date" bug is completely fixed — never displayed anywhere
+- All date fields support null/empty safely with professional fallback labels
+- Deadline is now optional in the create/edit form with clear validation
+- Existing invalid date values are handled gracefully at display time
+- Build: ✅ Compiled successfully
