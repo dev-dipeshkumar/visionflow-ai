@@ -78,16 +78,16 @@ export function BillingPage() {
   const currentPlan = currentUser?.plan ?? 'free_trial'
   const limits = planLimits[currentPlan]
 
-  // Fetch subscription info
+  // Fetch subscription info (session cookie provides authentication)
   useEffect(() => {
     async function fetchSubscription() {
       try {
-        if (currentUser?.id) {
-          const res = await fetch(`/api/billing/subscription?userId=${currentUser.id}`)
-          if (res.ok) {
-            const data = await res.json()
-            setSubscription(data)
-          }
+        const res = await fetch('/api/billing/subscription', {
+          credentials: 'same-origin', // Include HTTP-only session cookie
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setSubscription(data)
         }
       } catch {
         // Use fallback data from store
@@ -96,7 +96,7 @@ export function BillingPage() {
       }
     }
     fetchSubscription()
-  }, [currentUser?.id])
+  }, [])
 
   const leadsUsed = subscription?.usage?.leads ?? 32
   const agentsUsed = subscription?.usage?.agents ?? 1

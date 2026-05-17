@@ -101,13 +101,13 @@ export function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>('all')
   const [searchInput, searchQuery, setSearchInput] = useDebouncedSearch(300)
 
-  // Fetch invoices
+  // Fetch invoices (session cookie provides authentication)
   useEffect(() => {
     async function fetchInvoices() {
       try {
-        // Get tenantId from the user context
-        // Since we don't have direct tenantId in currentUser, we'll use userId to fetch
-        const res = await fetch(`/api/billing/invoices?userId=${currentUser?.id ?? ''}`)
+        const res = await fetch('/api/billing/invoices', {
+          credentials: 'same-origin', // Include HTTP-only session cookie
+        })
         if (res.ok) {
           const data = await res.json()
           setInvoices(data.invoices ?? [])
@@ -120,12 +120,14 @@ export function InvoicesPage() {
       }
     }
     fetchInvoices()
-  }, [currentUser?.id])
+  }, [])
 
   const handleRefresh = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/billing/invoices?userId=${currentUser?.id ?? ''}`)
+      const res = await fetch('/api/billing/invoices', {
+        credentials: 'same-origin', // Include HTTP-only session cookie
+      })
       if (res.ok) {
         const data = await res.json()
         setInvoices(data.invoices ?? [])
@@ -135,7 +137,7 @@ export function InvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentUser?.id])
+  }, [])
 
   const handleDownload = useCallback((invoice: Invoice) => {
     toast({

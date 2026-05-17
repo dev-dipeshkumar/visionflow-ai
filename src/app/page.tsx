@@ -1,6 +1,7 @@
 'use client'
 
-import { useAppStore } from '@/lib/store'
+import { useEffect } from 'react'
+import { useAppStore, type CurrentUser } from '@/lib/store'
 import { Hero } from '@/components/landing/hero'
 import { Trust } from '@/components/landing/trust'
 import { Problem } from '@/components/landing/problem'
@@ -49,7 +50,66 @@ function LandingView() {
 const authViewTransition = { duration: 0.3 }
 
 export default function Home() {
-  const { viewMode } = useAppStore()
+  const { viewMode, setCurrentUser, setViewMode, isRestoringSession, setIsRestoringSession } = useAppStore()
+
+  // On mount, try to restore the session from the HTTP-only cookie
+  useEffect(() => {
+    // Only attempt restore if we're on the landing/login page and don't have a user
+    // This runs once on initial page load
+    const restoreSession = async () => {
+      setIsRestoringSession(true)
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          credentials: 'same-origin', // Include HTTP-only cookies
+        })
+        const data = await res.json()
+
+        if (res.ok && data.valid && data.user) {
+          // Session cookie is valid — restore the user
+          const user: CurrentUser = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name || 'User',
+            role: data.user.role,
+            isTester: data.user.isTester || false,
+            department: data.user.department || 'General',
+            avatarUrl: data.user.avatarUrl,
+            plan: data.user.plan,
+            workspace: data.user.workspace,
+            subscriptionStatus: data.user.subscriptionStatus ?? data.user.tenantSubscriptionStatus,
+            emailVerified: data.user.emailVerified,
+            onboardingStatus: data.user.onboardingStatus,
+          }
+          setCurrentUser(user)
+          setViewMode('app')
+        }
+        // If session is invalid, stay on current view (landing/login)
+      } catch {
+        // Network error — stay on current view
+      } finally {
+        setIsRestoringSession(false)
+      }
+    }
+
+    restoreSession()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show loading state while checking session
+  if (isRestoringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-sm text-muted-foreground">Restoring session...</p>
+        </motion.div>
+      </div>
+    )
+  }
 
   return (
     <>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthUser, unauthenticated } from '@/lib/auth'
 
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,12 @@ You have access to the user's CRM data, agents, workflows, and analytics. Be con
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for chat API
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return unauthenticated('Please sign in to use AI Chat')
+    }
+
     const body = await request.json()
     const { messages, model } = body
 
@@ -30,9 +37,9 @@ export async function POST(request: NextRequest) {
       const ZAI = (await import('z-ai-web-dev-sdk')).default
       const zai = await ZAI.create()
 
-      // Build conversation with system prompt
+      // Build conversation with system prompt including user context
       const conversationMessages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT },
+        { role: 'system' as const, content: `${SYSTEM_PROMPT}\n\nCurrent user: ${authUser.name || authUser.email}, Role: ${authUser.role}, Workspace: ${authUser.workspace}, Plan: ${authUser.plan}` },
         ...messages.map((msg: { role: string; content: string }) => ({
           role: msg.role === 'assistant' ? 'assistant' as const : 'user' as const,
           content: msg.content,

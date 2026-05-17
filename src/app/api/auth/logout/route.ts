@@ -1,26 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getAuthUser, clearSessionCookie, SESSION_COOKIE_NAME } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    // Read session token from the HTTP-only cookie
+    const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
+    if (sessionToken) {
+      // Delete only the current session (not all sessions for the user)
+      await prisma.session.deleteMany({
+        where: { token: sessionToken },
+      }).catch(() => {
+        // Ignore error if session doesn't exist
+      })
     }
 
-    // Delete all sessions for the user
-    await prisma.session.deleteMany({
-      where: { userId },
-    })
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Logged out successfully',
     })
+
+    // Clear the HTTP-only session cookie
+    clearSessionCookie(response)
+
+    return response
   } catch (error) {
     console.error('Logout error:', error)
     return NextResponse.json(

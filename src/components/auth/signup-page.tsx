@@ -113,6 +113,8 @@ export function SignupPage() {
         return
       }
 
+      // Map API response to CurrentUser
+      // Session is now auto-created and stored in an HTTP-only cookie by the server
       const user: CurrentUser = {
         id: data.user.id,
         email: data.user.email,
@@ -121,7 +123,11 @@ export function SignupPage() {
         isTester: data.user.isTester || false,
         department: data.user.department || 'General',
         avatarUrl: data.user.avatarUrl,
-        workspace: workspaceName.trim(),
+        workspace: data.user.workspace || workspaceName.trim(),
+        plan: data.user.plan,
+        subscriptionStatus: data.user.subscriptionStatus,
+        emailVerified: data.user.emailVerified,
+        onboardingStatus: data.user.onboardingStatus,
       }
 
       setSuccess('Account created successfully!')
@@ -436,7 +442,7 @@ export function SignupPage() {
             {/* Security notice */}
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground pt-1">
               <Lock className="h-3 w-3" />
-              <span>Secured with bcrypt hashing. Your data is encrypted at rest.</span>
+              <span>Secured with HTTP-only session cookies and bcrypt hashing.</span>
             </div>
 
             {/* Back to home */}

@@ -791,6 +791,7 @@ export function ChatPage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', // Include HTTP-only session cookie
         body: JSON.stringify({
           messages,
           model: selectedModel,
@@ -799,6 +800,14 @@ export function ChatPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+
+        // Handle session expiration — redirect to login
+        if (response.status === 401) {
+          setIsStreaming(false)
+          setStreamingText('')
+          setLastError({ type: 'api-key', message: errorData.error || 'Please sign in to use AI Chat.' })
+          return
+        }
 
         if (errorData.error === 'MISSING_API_KEY') {
           setIsStreaming(false)

@@ -1,35 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getAuthUser, unauthenticated, unauthorized } from '@/lib/auth'
 
 const VALID_PLANS = ['free_trial', 'starter', 'pro', 'agency', 'enterprise'] as const
 type ValidPlan = (typeof VALID_PLANS)[number]
 
-// GET /api/billing/subscription?userId=xxx
+// GET /api/billing/subscription — Get subscription info for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId query parameter is required' },
-        { status: 400 }
-      )
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return unauthenticated()
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true },
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: authUser.tenantId },
     })
 
-    if (!user) {
+    if (!tenant) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'Workspace not found' },
         { status: 404 }
       )
     }
-
-    const tenant = user.tenant
 
     // Count leads and agents for this tenant
     const [leadCount, agentCount] = await Promise.all([
@@ -56,16 +49,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/billing/subscription
-// Body: { userId: string, newPlan: string }
+// POST /api/billing/subscription — Update subscription plan (owner/admin only)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, newPlan } = body
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return unauthenticated()
+    }
 
-    if (!userId || !newPlan) {
+    // Only owners and admins can change the subscription plan
+    if (authUser.role !== 'owner' && authUser.role !== 'admin') {
+      return unauthorized('Only workspace owners and admins can change the subscription plan')
+    }
+
+    const body = await request.json()
+    const { newPlan } = body
+
+    if (!newPlan) {
       return NextResponse.json(
-        { error: 'userId and newPlan are required' },
+        { error: 'newPlan is required' },
         { status: 400 }
       )
     }
@@ -77,19 +79,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true },
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: authUser.tenantId },
     })
 
-    if (!user) {
+    if (!tenant) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'Workspace not found' },
         { status: 404 }
       )
     }
-
-    const tenant = user.tenant
 
     // Determine new subscription status
     const newStatus = newPlan === 'free_trial' ? 'trial' : 'active'

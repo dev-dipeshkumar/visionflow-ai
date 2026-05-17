@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeEmail, isValidEmail } from '@/lib/sanitize'
+import { setSessionCookie } from '@/lib/auth'
 import { v4 as uuidv4 } from 'uuid'
 
 const MAX_FAILED_ATTEMPTS = 5
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     // Return enhanced user info with plan/workspace/subscription data
     const { passwordHash: _, ...safeUser } = user
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         ...safeUser,
@@ -135,9 +136,13 @@ export async function POST(request: NextRequest) {
         workspace: user.tenant?.name ?? '',
         subscriptionStatus: user.tenant?.subscriptionStatus ?? user.subscriptionStatus,
       },
-      sessionToken,
       message: 'Login successful',
     })
+
+    // Set HTTP-only session cookie
+    setSessionCookie(response, sessionToken, sessionExpiry)
+
+    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(

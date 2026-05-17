@@ -1,39 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    // Validate the session from the HTTP-only cookie
+    const authUser = await getAuthUser(request)
 
-    if (!userId) {
+    if (!authUser) {
       return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true },
-    })
-
-    if (!user || !user.isActive) {
-      return NextResponse.json(
-        { error: 'Invalid or inactive user' },
+        { valid: false, error: 'Session expired or invalid' },
         { status: 401 }
       )
     }
 
-    const { passwordHash: _, ...safeUser } = user
-
+    // Return the authenticated user data (derived from verified session)
     return NextResponse.json({
       valid: true,
-      user: safeUser,
+      user: {
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.name,
+        avatarUrl: authUser.avatarUrl,
+        role: authUser.role,
+        isTester: authUser.isTester,
+        department: authUser.department,
+        tenantId: authUser.tenantId,
+        isActive: authUser.isActive,
+        subscriptionStatus: authUser.subscriptionStatus,
+        trialEndsAt: authUser.trialEndsAt?.toISOString() ?? null,
+        emailVerified: authUser.emailVerified,
+        onboardingStatus: authUser.onboardingStatus,
+        // Derived from tenant
+        plan: authUser.plan,
+        workspace: authUser.workspace,
+        tenantSubscriptionStatus: authUser.tenantSubscriptionStatus,
+      },
     })
   } catch (error) {
     console.error('Verify error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { valid: false, error: 'Internal server error' },
       { status: 500 }
     )
   }

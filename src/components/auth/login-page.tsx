@@ -68,6 +68,7 @@ export function LoginPage() {
       }
 
       // Map API response to CurrentUser
+      // Session is now stored in an HTTP-only cookie set by the server
       const user: CurrentUser = {
         id: data.user.id,
         email: data.user.email,
@@ -76,6 +77,11 @@ export function LoginPage() {
         isTester: data.user.isTester || false,
         department: data.user.department || 'General',
         avatarUrl: data.user.avatarUrl,
+        plan: data.user.plan,
+        workspace: data.user.workspace,
+        subscriptionStatus: data.user.subscriptionStatus,
+        emailVerified: data.user.emailVerified,
+        onboardingStatus: data.user.onboardingStatus,
       }
 
       setSuccess(`Welcome back, ${user.name}!`)
@@ -357,7 +363,7 @@ export function LoginPage() {
             {/* Security notice */}
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground pt-1">
               <Lock className="h-3 w-3" />
-              <span>Secured with bcrypt hashing. Passwords are never stored in plaintext.</span>
+              <span>Secured with HTTP-only session cookies and bcrypt hashing.</span>
             </div>
 
             {/* Sign up link */}

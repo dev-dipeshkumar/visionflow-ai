@@ -1,38 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getAuthUser, unauthenticated } from '@/lib/auth'
 
-// GET /api/billing/invoices?tenantId=xxx or ?userId=xxx
+// GET /api/billing/invoices — Get invoices for the authenticated user's tenant
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-    const userId = searchParams.get('userId')
-
-    let resolvedTenantId = tenantId
-
-    // If userId is provided instead of tenantId, resolve tenantId from user
-    if (!resolvedTenantId && userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { tenantId: true },
-      })
-
-      if (!user) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        )
-      }
-
-      resolvedTenantId = user.tenantId
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return unauthenticated()
     }
 
-    if (!resolvedTenantId) {
-      return NextResponse.json(
-        { error: 'tenantId or userId query parameter is required' },
-        { status: 400 }
-      )
-    }
+    // Use the authenticated user's tenantId — no query param trust
+    const resolvedTenantId = authUser.tenantId
 
     const invoices = await prisma.invoice.findMany({
       where: { tenantId: resolvedTenantId },

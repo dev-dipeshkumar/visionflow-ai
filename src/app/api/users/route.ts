@@ -1,41 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getAuthUser, unauthenticated, unauthorized } from '@/lib/auth'
 
-// Simple auth check - requires x-user-id header
-function validateAuth(request: NextRequest): string | null {
-  const userId = request.headers.get('x-user-id')
-  return userId
-}
-
-// GET /api/users — List all users (admin only, requires auth)
+// GET /api/users — List all users (admin only, requires session auth)
 export async function GET(request: NextRequest) {
   try {
-    const userId = validateAuth(request)
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return unauthenticated()
     }
 
-    // Verify the requesting user exists and is admin
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, role: true, isActive: true },
-    })
-
-    if (!requestingUser || !requestingUser.isActive) {
-      return NextResponse.json(
-        { error: 'Invalid or inactive user' },
-        { status: 401 }
-      )
-    }
-
-    if (requestingUser.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      )
+    // Verify the requesting user has admin or owner role
+    if (authUser.role !== 'admin' && authUser.role !== 'owner') {
+      return unauthorized('Admin or owner access required')
     }
 
     const { searchParams } = new URL(request.url)
@@ -43,16 +20,16 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role')
     const tenantId = searchParams.get('tenantId')
 
-    const where: Record<string, unknown> = {}
+    // Default: only show users from the authenticated user's tenant
+    const where: Record<string, unknown> = {
+      tenantId: tenantId || authUser.tenantId,
+    }
 
     if (isTester !== null) {
       where.isTester = isTester === 'true'
     }
     if (role) {
       where.role = role
-    }
-    if (tenantId) {
-      where.tenantId = tenantId
     }
 
     const users = await prisma.user.findMany({

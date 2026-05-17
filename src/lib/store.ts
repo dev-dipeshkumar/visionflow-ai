@@ -97,7 +97,9 @@ interface AppState {
   setNotifications: (n: number) => void
   currentUser: CurrentUser | null
   setCurrentUser: (user: CurrentUser | null) => void
-  signOut: () => void
+  signOut: () => Promise<void>
+  isRestoringSession: boolean
+  setIsRestoringSession: (restoring: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -117,5 +119,16 @@ export const useAppStore = create<AppState>((set) => ({
   setNotifications: (n) => set({ notifications: n }),
   currentUser: null,
   setCurrentUser: (user) => set({ currentUser: user }),
-  signOut: () => set({ currentUser: null, viewMode: 'login', activePage: 'dashboard' }),
+  isRestoringSession: false,
+  setIsRestoringSession: (restoring) => set({ isRestoringSession: restoring }),
+  signOut: async () => {
+    // Call the server logout API to invalidate the session and clear the cookie
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Even if the API call fails, clear client state
+    }
+    // Clear client state
+    set({ currentUser: null, viewMode: 'login', activePage: 'dashboard' })
+  },
 }))

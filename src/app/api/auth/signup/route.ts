@@ -4,6 +4,8 @@ import crypto from 'crypto'
 import prisma from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeEmail, isValidEmail, sanitizeString, limitLength } from '@/lib/sanitize'
+import { setSessionCookie } from '@/lib/auth'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,7 +70,10 @@ export async function POST(request: NextRequest) {
       .replace(/^-|-$/g, '')
       + '-' + crypto.randomBytes(3).toString('hex')
 
-    // Create tenant and user in a transaction
+    // Create tenant, user, email verification token, and session in a transaction
+    const sessionToken = uuidv4()
+    const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+
     const result = await prisma.$transaction(async (tx) => {
       // Create workspace (tenant)
       const tenant = await tx.tenant.create({
@@ -112,19 +117,36 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      // Auto-login: create session for the new user
+      await tx.session.create({
+        data: {
+          token: sessionToken,
+          userId: user.id,
+          expiresAt: sessionExpiry,
+        },
+      })
+
       return { tenant, user }
     })
 
     const { passwordHash: _, ...safeUser } = result.user
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         ...safeUser,
         tenant: result.tenant,
+        plan: result.tenant.plan,
+        workspace: result.tenant.name,
+        subscriptionStatus: result.tenant.subscriptionStatus,
       },
       message: 'Account created successfully',
     }, { status: 201 })
+
+    // Set HTTP-only session cookie for auto-login
+    setSessionCookie(response, sessionToken, sessionExpiry)
+
+    return response
   } catch (error) {
     console.error('Signup error:', error)
     return NextResponse.json(

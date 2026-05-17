@@ -106,7 +106,8 @@ export function PricingPage() {
       const res = await fetch('/api/billing/subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser?.id, newPlan: plan }),
+        credentials: 'same-origin', // Include HTTP-only session cookie
+        body: JSON.stringify({ newPlan: plan }), // userId derived from session cookie server-side
       })
       const data = await res.json()
 
