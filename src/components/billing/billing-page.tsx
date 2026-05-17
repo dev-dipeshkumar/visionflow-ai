@@ -18,6 +18,9 @@ import {
   Users,
   Bot,
   Receipt,
+  ExternalLink,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   Card,
@@ -74,6 +77,7 @@ export function BillingPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   const currentPlan = currentUser?.plan ?? 'free_trial'
   const limits = planLimits[currentPlan]
@@ -104,12 +108,43 @@ export function BillingPage() {
   const agentsLimit = limits.maxAgents
   const status = subscription?.status ?? currentUser?.subscriptionStatus ?? 'trial'
 
-  const handleAddPayment = useCallback(() => {
-    toast({
-      title: 'Coming soon',
-      description: 'Payment method integration will be available shortly.',
-    })
-  }, [toast])
+  const handleManageBilling = useCallback(async () => {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        credentials: 'same-origin',
+      })
+      const data = await res.json()
+
+      if (res.ok && data.url) {
+        window.location.href = data.url
+      } else if (data.error === 'STRIPE_NOT_CONFIGURED') {
+        toast({
+          title: 'Payments not configured',
+          description: 'Stripe is not configured on this server.',
+          variant: 'destructive',
+        })
+      } else if (data.error === 'NO_STRIPE_CUSTOMER') {
+        // No Stripe customer yet — redirect to pricing to start checkout
+        setActivePage('pricing')
+      } else {
+        toast({
+          title: 'Portal unavailable',
+          description: data.error ?? data.message ?? 'Could not open billing portal.',
+          variant: 'destructive',
+        })
+      }
+    } catch {
+      toast({
+        title: 'Network error',
+        description: 'Could not reach the server.',
+        variant: 'destructive',
+      })
+    } finally {
+      setPortalLoading(false)
+    }
+  }, [toast, setActivePage])
 
   const formatRenewalDate = useCallback(() => {
     if (subscription?.currentPeriodEnd) {
@@ -279,32 +314,73 @@ export function BillingPage() {
           </Card>
         </motion.div>
 
-        {/* Payment Method */}
+        {/* Payment Method / Stripe Billing Portal */}
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard className="h-4 w-4" />
-                Payment Method
-              </CardTitle>
-              <CardDescription>Manage your payment information</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    {currentPlan !== 'free_trial' ? (
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    Payment & Billing
+                  </CardTitle>
+                  <CardDescription>
+                    {currentPlan !== 'free_trial'
+                      ? 'Your subscription is managed securely through Stripe'
+                      : 'Add a payment method to upgrade to a paid plan'}
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <CreditCard className="h-6 w-6 text-muted-foreground" />
+              {currentPlan !== 'free_trial' ? (
+                // Active paid subscription — show Stripe portal button
+                <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <ShieldCheck className="h-6 w-6 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Managed by Stripe</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Update payment methods, view invoices, or cancel your subscription
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleManageBilling}
+                    disabled={portalLoading}
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4 mr-1.5" />
+                    )}
+                    Manage Billing
+                  </Button>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">No payment method on file</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Add a credit or debit card to enable paid plans
-                  </p>
+              ) : (
+                // Free trial — prompt to upgrade
+                <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">No payment method on file</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upgrade to a paid plan to add your payment details via Stripe
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setActivePage('pricing')}>
+                    <Zap className="h-4 w-4 mr-1.5" />
+                    View Plans
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" onClick={handleAddPayment}>
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  Add Payment Method
-                </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -354,16 +430,16 @@ export function BillingPage() {
               <Separator />
 
               <button
-                onClick={handleAddPayment}
+                onClick={handleManageBilling}
                 className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-muted/50 transition-colors group"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Receipt className="h-4 w-4 text-primary" />
+                    <ExternalLink className="h-4 w-4 text-primary" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium">Billing History</p>
-                    <p className="text-xs text-muted-foreground">View your complete billing history</p>
+                    <p className="text-sm font-medium">Manage Billing</p>
+                    <p className="text-xs text-muted-foreground">Update payment, cancel, or change plan via Stripe</p>
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />

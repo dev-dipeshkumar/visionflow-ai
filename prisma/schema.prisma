@@ -8,30 +8,34 @@ datasource db {
 }
 
 model Tenant {
-  id                 String   @id @default(cuid())
-  name               String
-  slug               String   @unique
-  industry           String?
-  plan               String   @default("starter")
-  settings           String?
-  logoUrl            String?
-  subscriptionStatus String   @default("trial") // trial | active | past_due | canceled | unpaid
-  subscriptionId     String?  // Stripe subscription ID
-  trialEndsAt        DateTime?
-  billingEmail       String?
-  ownerId            String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  users              User[]
-  leads              Lead[]
-  contacts           Contact[]
-  campaigns          Campaign[]
-  workflows          Workflow[]
-  projects           Project[]
-  agents             AIAgent[]
-  integrations       Integration[]
-  invoices           Invoice[]
-  templates          Template[]
+  id                     String    @id @default(cuid())
+  name                   String
+  slug                   String    @unique
+  industry               String?
+  plan                   String    @default("free_trial")
+  settings               String?
+  logoUrl                String?
+  subscriptionStatus     String    @default("trial") // trial | active | past_due | canceled | unpaid
+  subscriptionId         String?   // Stripe subscription ID
+  stripeCustomerId       String?   @unique // Stripe customer ID
+  stripePriceId          String?   // Current Stripe price ID
+  stripeCurrentPeriodEnd DateTime? // Current billing period end
+  cancelAtPeriodEnd      Boolean   @default(false) // Subscription set to cancel
+  trialEndsAt            DateTime?
+  billingEmail           String?
+  ownerId                String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  users                  User[]
+  leads                  Lead[]
+  contacts               Contact[]
+  campaigns              Campaign[]
+  workflows              Workflow[]
+  projects               Project[]
+  agents                 AIAgent[]
+  integrations           Integration[]
+  invoices               Invoice[]
+  templates              Template[]
 }
 
 model User {

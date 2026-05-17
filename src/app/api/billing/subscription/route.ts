@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
       plan: tenant.plan as ValidPlan,
       status: tenant.subscriptionStatus,
       trialEndsAt: tenant.trialEndsAt?.toISOString() ?? null,
-      currentPeriodEnd: null, // Would come from Stripe in production
+      currentPeriodEnd: tenant.stripeCurrentPeriodEnd?.toISOString() ?? null,
+      cancelAtPeriodEnd: tenant.cancelAtPeriodEnd ?? false,
       usage: {
         leads: leadCount,
         agents: agentCount,
@@ -49,7 +50,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/billing/subscription — Update subscription plan (owner/admin only)
+// POST /api/billing/subscription — Direct plan change (free_trial only, or when Stripe not configured)
+// Paid plan changes MUST go through Stripe Checkout
 export async function POST(request: NextRequest) {
   try {
     const authUser = await getAuthUser(request)
@@ -90,6 +92,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Paid plans MUST go through Stripe Checkout — reject direct API upgrades
+    if (newPlan !== 'free_trial' && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder') {
+      return NextResponse.json(
+        { error: 'STRIPE_CHECKOUT_REQUIRED', message: 'Paid plan changes must go through Stripe Checkout. Use /api/billing/create-checkout-session instead.' },
+        { status: 400 }
+      )
+    }
+
     // Determine new subscription status
     const newStatus = newPlan === 'free_trial' ? 'trial' : 'active'
 
@@ -113,7 +123,8 @@ export async function POST(request: NextRequest) {
       plan: updatedTenant.plan as ValidPlan,
       status: updatedTenant.subscriptionStatus,
       trialEndsAt: updatedTenant.trialEndsAt?.toISOString() ?? null,
-      currentPeriodEnd: null,
+      currentPeriodEnd: updatedTenant.stripeCurrentPeriodEnd?.toISOString() ?? null,
+      cancelAtPeriodEnd: updatedTenant.cancelAtPeriodEnd ?? false,
       usage: {
         leads: leadCount,
         agents: agentCount,

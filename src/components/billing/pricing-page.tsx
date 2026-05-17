@@ -12,6 +12,7 @@ import {
   Building2,
   Sparkles,
   ArrowRight,
+  Loader2,
 } from 'lucide-react'
 import {
   Card,
@@ -102,31 +103,71 @@ export function PricingPage() {
 
   const handleUpgrade = useCallback(async (plan: SubscriptionPlan) => {
     setUpgradingPlan(plan)
+
+    // Free trial: direct plan change (no payment required)
+    if (plan === 'free_trial') {
+      try {
+        const res = await fetch('/api/billing/subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ newPlan: 'free_trial' }),
+        })
+        const data = await res.json()
+
+        if (res.ok) {
+          if (currentUser) {
+            setCurrentUser({
+              ...currentUser,
+              plan: 'free_trial',
+              subscriptionStatus: 'trial',
+            })
+          }
+          toast({
+            title: 'Plan changed',
+            description: 'You\'ve been switched to the Free Trial plan.',
+          })
+        } else {
+          toast({
+            title: 'Change failed',
+            description: data.error ?? 'Something went wrong.',
+            variant: 'destructive',
+          })
+        }
+      } catch {
+        toast({ title: 'Network error', description: 'Could not reach the server.', variant: 'destructive' })
+      } finally {
+        setUpgradingPlan(null)
+      }
+      return
+    }
+
+    // Paid plans: redirect to Stripe Checkout
     try {
-      const res = await fetch('/api/billing/subscription', {
+      const res = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin', // Include HTTP-only session cookie
-        body: JSON.stringify({ newPlan: plan }), // userId derived from session cookie server-side
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          plan,
+          interval: isAnnual ? 'yearly' : 'monthly',
+        }),
       })
       const data = await res.json()
 
-      if (res.ok) {
-        if (currentUser) {
-          setCurrentUser({
-            ...currentUser,
-            plan,
-            subscriptionStatus: 'active',
-          })
-        }
+      if (res.ok && data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url
+      } else if (data.error === 'STRIPE_NOT_CONFIGURED') {
         toast({
-          title: 'Plan updated',
-          description: `You've been switched to the ${planLimits[plan].label} plan.`,
+          title: 'Payments not configured',
+          description: 'Stripe is not configured on this server. Add Stripe keys to enable payments.',
+          variant: 'destructive',
         })
       } else {
         toast({
-          title: 'Update failed',
-          description: data.error ?? 'Something went wrong. Please try again.',
+          title: 'Checkout failed',
+          description: data.error ?? data.message ?? 'Could not create checkout session.',
           variant: 'destructive',
         })
       }
@@ -139,7 +180,7 @@ export function PricingPage() {
     } finally {
       setUpgradingPlan(null)
     }
-  }, [currentUser, setCurrentUser, toast])
+  }, [currentUser, isAnnual, setCurrentUser, toast])
 
   const getPlanRelation = (plan: SubscriptionPlan) => {
     const currentIndex = planOrder.indexOf(currentPlan)
@@ -342,14 +383,10 @@ export function PricingPage() {
                       disabled={isUpgrading}
                     >
                       {isUpgrading ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          className="h-4 w-4 border-2 border-current border-t-transparent rounded-full"
-                        />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
-                          {relation === 'upgrade' ? 'Upgrade' : 'Downgrade'}
+                          {plan === 'free_trial' ? 'Downgrade' : relation === 'upgrade' ? 'Upgrade' : 'Change Plan'}
                           <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                         </>
                       )}
