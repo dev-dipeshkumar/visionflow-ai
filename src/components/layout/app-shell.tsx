@@ -5,6 +5,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { PageContent } from '@/components/layout/page-content'
+import { CommandPalette } from '@/components/layout/command-palette'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
@@ -34,6 +35,9 @@ export function AppShell() {
           <PageContent />
         </div>
       </div>
+
+      {/* Global Command Palette */}
+      <CommandPalette />
     </TooltipProvider>
   )
 }

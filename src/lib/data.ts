@@ -92,6 +92,13 @@ export const chatMessages: {
   id: string; role: 'assistant' | 'user'; content: string; time: string
 }[] = []
 
+// ═══════════════════════════════════════════════════════════════════════
+// PERSISTENT DATA: The following docs data is user-authored content that
+// must NEVER be cleared as part of mock data removal. These arrays may
+// be populated by user actions and should persist across sessions.
+// ═══════════════════════════════════════════════════════════════════════
+export const PERSISTENT_DOCS = true  // Flag to protect docs data from cleanup
+
 // ─── Enterprise Docs ──────────────────────────────────────────────────────
 
 export const docsCategories = [
@@ -119,6 +126,12 @@ export const docsVersions: {
   id: string; articleId: string; version: string; author: string;
   updatedAt: string; changes: string
 }[] = []
+
+// ═══════════════════════════════════════════════════════════════════════
+// PERSISTENT DATA: The following user-generated data must NEVER be cleared.
+// These arrays represent user-authored content that persists across sessions.
+// ═══════════════════════════════════════════════════════════════════════
+export const PERSISTENT_USER_DATA = true  // Flag to protect user data from cleanup
 
 // ─── Team Accounts ─────────────────────────────────────────────────────
 

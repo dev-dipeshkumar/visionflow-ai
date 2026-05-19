@@ -31,6 +31,8 @@ import {
   Share2,
   Bot,
   X,
+  XCircle,
+  CheckCircle2,
   CheckSquare,
   Square,
   Zap,
@@ -1665,6 +1667,266 @@ function MobilePipelineView({
   )
 }
 
+// ─── Import Data Dialog ──────────────────────────────────────────────────────
+function ImportDataDialog({
+  open,
+  onOpenChange,
+  onImport,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onImport: (leads: Lead[]) => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [previewLeads, setPreviewLeads] = useState<Lead[]>([])
+  const [fileName, setFileName] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  const resetState = () => {
+    setPreviewLeads([])
+    setFileName('')
+    setIsProcessing(false)
+    setError(null)
+    setIsDragOver(false)
+  }
+
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) resetState()
+    onOpenChange(isOpen)
+  }
+
+  const parseCSV = (text: string): Lead[] => {
+    const lines = text.split('\n').filter((l) => l.trim())
+    if (lines.length < 2) return []
+
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase())
+
+    const nameIdx = headers.findIndex((h) => ['name', 'full name', 'contact name'].includes(h))
+    const emailIdx = headers.findIndex((h) => ['email', 'e-mail', 'email address'].includes(h))
+    const companyIdx = headers.findIndex((h) => ['company', 'company name', 'organization'].includes(h))
+    const titleIdx = headers.findIndex((h) => ['title', 'job title', 'position', 'role'].includes(h))
+    const industryIdx = headers.findIndex((h) => ['industry', 'sector'].includes(h))
+    const sourceIdx = headers.findIndex((h) => ['source', 'lead source'].includes(h))
+    const valueIdx = headers.findIndex((h) => ['value', 'deal value', 'amount'].includes(h))
+    const phoneIdx = headers.findIndex((h) => ['phone', 'phone number'].includes(h))
+    const locationIdx = headers.findIndex((h) => ['location', 'city', 'address'].includes(h))
+
+    const leads: Lead[] = []
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
+      const name = nameIdx >= 0 ? values[nameIdx] : values[0] || 'Unknown'
+      const email = emailIdx >= 0 ? values[emailIdx] : values[1] || ''
+
+      leads.push({
+        id: `import-${Date.now()}-${i}`,
+        name,
+        email,
+        company: companyIdx >= 0 ? values[companyIdx] : '',
+        title: titleIdx >= 0 ? values[titleIdx] : '',
+        status: 'new',
+        score: Math.floor(Math.random() * 30) + 40,
+        source: sourceIdx >= 0 ? values[sourceIdx] : 'Import',
+        industry: industryIdx >= 0 ? values[industryIdx] : '',
+        value: valueIdx >= 0 ? values[valueIdx] : '$0K',
+        avatar: name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2),
+        phone: phoneIdx >= 0 ? values[phoneIdx] : '',
+        location: locationIdx >= 0 ? values[locationIdx] : '',
+        website: '',
+        companySize: '',
+        revenue: '',
+        createdAt: new Date().toISOString().split('T')[0],
+        lastContact: new Date().toISOString().split('T')[0],
+        tags: ['imported'],
+      })
+    }
+    return leads
+  }
+
+  const parseJSON = (text: string): Lead[] => {
+    const data = JSON.parse(text)
+    const items = Array.isArray(data) ? data : [data]
+
+    return items.map((item: Record<string, string>, idx: number) => ({
+      id: `import-${Date.now()}-${idx}`,
+      name: item.name || item.full_name || item.contactName || 'Unknown',
+      email: item.email || item.email_address || '',
+      company: item.company || item.company_name || item.organization || '',
+      title: item.title || item.job_title || item.position || '',
+      status: 'new',
+      score: Math.floor(Math.random() * 30) + 40,
+      source: item.source || item.lead_source || 'Import',
+      industry: item.industry || item.sector || '',
+      value: item.value || item.deal_value || item.amount || '$0K',
+      avatar: (item.name || 'U').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+      phone: item.phone || item.phone_number || '',
+      location: item.location || item.city || item.address || '',
+      website: item.website || item.url || '',
+      companySize: item.company_size || item.companySize || '',
+      revenue: item.revenue || '',
+      createdAt: new Date().toISOString().split('T')[0],
+      lastContact: new Date().toISOString().split('T')[0],
+      tags: ['imported'],
+    }))
+  }
+
+  const processFile = (file: File) => {
+    setIsProcessing(true)
+    setError(null)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string
+        const ext = file.name.split('.').pop()?.toLowerCase()
+
+        let leads: Lead[] = []
+        if (ext === 'csv') {
+          leads = parseCSV(text)
+        } else if (ext === 'json') {
+          leads = parseJSON(text)
+        } else {
+          setError('Unsupported file format. Please use CSV or JSON.')
+          setIsProcessing(false)
+          return
+        }
+
+        if (leads.length === 0) {
+          setError('No valid leads found in the file.')
+        } else {
+          setPreviewLeads(leads)
+          setFileName(file.name)
+        }
+      } catch {
+        setError('Failed to parse file. Please check the format.')
+      }
+      setIsProcessing(false)
+    }
+    reader.onerror = () => {
+      setError('Failed to read file.')
+      setIsProcessing(false)
+    }
+    reader.readAsText(file)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) processFile(file)
+  }
+
+  const handleImport = () => {
+    if (previewLeads.length > 0) {
+      onImport(previewLeads)
+      handleClose(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Import Data</DialogTitle>
+          <DialogDescription>
+            Import leads from CSV or JSON files.
+          </DialogDescription>
+        </DialogHeader>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.json"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+
+        {!previewLeads.length ? (
+          <div
+            className={`
+              border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
+              ${isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'}
+            `}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleDrop}
+          >
+            <Upload className="size-10 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium text-foreground">
+              {isDragOver ? 'Drop your file here' : 'Drag & drop or click to browse'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Supports CSV and JSON files (max 10MB)
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded-lg border bg-emerald-500/10 px-3 py-2">
+              <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+              <span className="text-sm text-emerald-700 dark:text-emerald-400">
+                {previewLeads.length} leads ready to import
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto">{fileName}</span>
+            </div>
+
+            <ScrollArea className="max-h-48">
+              <div className="space-y-1">
+                {previewLeads.slice(0, 10).map((lead) => (
+                  <div key={lead.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs">
+                    <Avatar className="size-6">
+                      <AvatarFallback className="text-[9px] font-semibold">{lead.avatar}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium truncate max-w-[120px]">{lead.name}</span>
+                    <span className="text-muted-foreground truncate max-w-[100px]">{lead.company}</span>
+                    <span className="text-muted-foreground truncate max-w-[120px] ml-auto">{lead.email}</span>
+                  </div>
+                ))}
+                {previewLeads.length > 10 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-1">
+                    +{previewLeads.length - 10} more leads...
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">
+            <XCircle className="size-4 text-red-500 shrink-0" />
+            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+          </div>
+        )}
+
+        {isProcessing && (
+          <div className="flex items-center justify-center gap-2 py-4">
+            <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-sm text-muted-foreground">Processing file...</span>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => handleClose(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleImport} disabled={previewLeads.length === 0 || isProcessing}>
+            <Upload className="size-4 mr-1.5" />
+            Import {previewLeads.length > 0 ? `${previewLeads.length} Leads` : ''}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export function CRMPage() {
   const { toast: showToast } = useToast()
@@ -1684,6 +1946,7 @@ export function CRMPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [localNotes, setLocalNotes] = useState<LocalNote[]>([])
   const [mobileStage, setMobileStage] = useState<string>('all')
 
@@ -1866,7 +2129,7 @@ export function CRMPage() {
                   Export
                 </Button>
 
-                <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setImportDialogOpen(true)}>
                   <Upload className="h-4 w-4" />
                   Import
                 </Button>
@@ -1904,7 +2167,7 @@ export function CRMPage() {
           title="No leads yet"
           description="Import leads or create your first pipeline contact to start tracking opportunities."
           primaryAction={{ label: 'Add Lead', onClick: () => setAddLeadOpen(true) }}
-          secondaryAction={{ label: 'Import CSV', onClick: () => {}, variant: 'outline' }}
+          secondaryAction={{ label: 'Import CSV', onClick: () => setImportDialogOpen(true), variant: 'outline' }}
         />
       ) : (
         <>
@@ -1991,6 +2254,16 @@ export function CRMPage() {
         onOpenChange={setDetailOpen}
         localNotes={localNotes}
         onAddNote={handleAddNote}
+      />
+
+      {/* ── Import Data Dialog ───────────────────────────────────── */}
+      <ImportDataDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImport={(importedLeads) => {
+          setLeads((prev) => [...importedLeads, ...prev])
+          showToast({ title: 'Import successful', description: `${importedLeads.length} leads imported.` })
+        }}
       />
     </div>
   )

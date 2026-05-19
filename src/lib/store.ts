@@ -80,6 +80,16 @@ export function hasPlanFeature(plan: SubscriptionPlan, feature: string): boolean
   return planFeatures[plan]?.includes(feature) ?? false
 }
 
+export interface NotificationItem {
+  id: string
+  title: string
+  description: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  timestamp: string
+  read: boolean
+  actionUrl?: string
+}
+
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -95,6 +105,11 @@ interface AppState {
   setChatOpen: (open: boolean) => void
   notifications: number
   setNotifications: (n: number) => void
+  notificationList: NotificationItem[]
+  setNotificationList: (list: NotificationItem[]) => void
+  markNotificationRead: (id: string) => void
+  markAllNotificationsRead: () => void
+  addNotification: (item: NotificationItem) => void
   currentUser: CurrentUser | null
   setCurrentUser: (user: CurrentUser | null) => void
   signOut: () => Promise<void>
@@ -115,8 +130,22 @@ export const useAppStore = create<AppState>((set) => ({
   setCommandOpen: (open) => set({ commandOpen: open }),
   chatOpen: false,
   setChatOpen: (open) => set({ chatOpen: open }),
-  notifications: 7,
+  notifications: 0,
   setNotifications: (n) => set({ notifications: n }),
+  notificationList: [],
+  setNotificationList: (list) => set({ notificationList: list, notifications: list.filter(n => !n.read).length }),
+  markNotificationRead: (id) => set((state) => {
+    const list = state.notificationList.map(n => n.id === id ? { ...n, read: true } : n)
+    return { notificationList: list, notifications: list.filter(n => !n.read).length }
+  }),
+  markAllNotificationsRead: () => set((state) => ({
+    notificationList: state.notificationList.map(n => ({ ...n, read: true })),
+    notifications: 0,
+  })),
+  addNotification: (item) => set((state) => {
+    const list = [item, ...state.notificationList]
+    return { notificationList: list, notifications: list.filter(n => !n.read).length }
+  }),
   currentUser: null,
   setCurrentUser: (user) => set({ currentUser: user }),
   isRestoringSession: false,
