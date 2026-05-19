@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       plan: tenant.plan as ValidPlan,
       status: tenant.subscriptionStatus,
       trialEndsAt: tenant.trialEndsAt?.toISOString() ?? null,
-      currentPeriodEnd: tenant.stripeCurrentPeriodEnd?.toISOString() ?? null,
-      cancelAtPeriodEnd: tenant.cancelAtPeriodEnd ?? false,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
       usage: {
         leads: leadCount,
         agents: agentCount,
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
       plan: updatedTenant.plan as ValidPlan,
       status: updatedTenant.subscriptionStatus,
       trialEndsAt: updatedTenant.trialEndsAt?.toISOString() ?? null,
-      currentPeriodEnd: updatedTenant.stripeCurrentPeriodEnd?.toISOString() ?? null,
-      cancelAtPeriodEnd: updatedTenant.cancelAtPeriodEnd ?? false,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
       usage: {
         leads: leadCount,
         agents: agentCount,
