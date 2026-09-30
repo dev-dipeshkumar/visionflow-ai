@@ -32,57 +32,62 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Try to use z-ai-web-dev-sdk for real AI response with a timeout
-    try {
-      const ZAI = (await import('z-ai-web-dev-sdk')).default
-      const zai = await ZAI.create()
+    const groqApiKey = process.env.GROQ_API_KEY
 
-      // Build conversation with system prompt including user context
-      const conversationMessages = [
-        { role: 'system' as const, content: `${SYSTEM_PROMPT}\n\nCurrent user: ${authUser.name || authUser.email}, Role: ${authUser.role}, Workspace: ${authUser.workspace}, Plan: ${authUser.plan}` },
-        ...messages.map((msg: { role: string; content: string }) => ({
-          role: msg.role === 'assistant' ? 'assistant' as const : 'user' as const,
-          content: msg.content,
-        })),
-      ]
-
-      // Add a timeout wrapper around the AI call
-      const aiPromise = zai.chat.completions.create({
-        messages: conversationMessages,
-        temperature: 0.7,
-        max_tokens: 1024,
-      })
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI request timed out')), 15000)
-      })
-
-      const completion = await Promise.race([aiPromise, timeoutPromise])
-
-      const aiMessage = completion.choices?.[0]?.message?.content
-
-      if (aiMessage) {
-        return NextResponse.json({
-          message: aiMessage,
-          model: model || 'default',
-          provider: 'z-ai',
-        })
-      }
-    } catch (aiError: unknown) {
-      const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown AI error'
-      console.warn('AI SDK call failed, falling back:', errorMessage)
-
-      // Check if it's an API key error
-      if (errorMessage.toLowerCase().includes('api key') ||
-          errorMessage.toLowerCase().includes('unauthorized') ||
-          errorMessage.toLowerCase().includes('authentication')) {
-        return NextResponse.json(
+    if (groqApiKey) {
+      try {
+        const conversationMessages = [
           {
-            error: 'MISSING_API_KEY',
-            message: 'Connect Gemini API in Settings to enable live AI responses.',
+            role: 'system',
+            content: `${SYSTEM_PROMPT}\n\nCurrent user: ${authUser.name || authUser.email}, Role: ${authUser.role}, Workspace: ${authUser.workspace}, Plan: ${authUser.plan}`,
           },
-          { status: 503 }
-        )
+          ...messages.map((msg: { role: string; content: string }) => ({
+            role: msg.role === 'assistant' ? 'assistant' : 'user',
+            content: msg.content,
+          })),
+        ]
+
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+        let response: Response
+
+        try {
+          response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model || 'llama-3.3-70b-versatile',
+              messages: conversationMessages,
+              temperature: 0.7,
+              max_tokens: 1024,
+            }),
+            signal: controller.signal,
+          })
+        } finally {
+          clearTimeout(timeout)
+        }
+
+        if (!response.ok) {
+          throw new Error(`Groq request failed with status ${response.status}`)
+        }
+
+        const completion = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>
+        }
+        const aiMessage = completion.choices?.[0]?.message?.content
+
+        if (aiMessage) {
+          return NextResponse.json({
+            message: aiMessage,
+            model: model || 'llama-3.3-70b-versatile',
+            provider: 'groq',
+          })
+        }
+      } catch (aiError: unknown) {
+        console.warn('Groq AI call failed, falling back:', aiError instanceof Error ? aiError.message : 'Unknown AI error')
       }
     }
 
