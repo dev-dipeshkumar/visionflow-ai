@@ -4,6 +4,13 @@ import { getAuthUser, unauthenticated } from '@/lib/auth'
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
+const SUPPORTED_GROQ_MODELS = new Set([
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'llama-3.3-70b-versatile',
+])
+
 const SYSTEM_PROMPT = `You are VisionFlow AI, an intelligent assistant for an enterprise SaaS platform. You help users with:
 - Lead generation and CRM management
 - Outreach campaigns and sales automation
@@ -33,6 +40,10 @@ export async function POST(request: NextRequest) {
     }
 
     const groqApiKey = process.env.GROQ_API_KEY
+    const requestedModel = typeof model === 'string' ? model : ''
+    const selectedGroqModel = SUPPORTED_GROQ_MODELS.has(requestedModel)
+      ? requestedModel
+      : DEFAULT_GROQ_MODEL
 
     if (groqApiKey) {
       try {
@@ -59,7 +70,7 @@ export async function POST(request: NextRequest) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: model || 'llama-3.3-70b-versatile',
+              model: selectedGroqModel,
               messages: conversationMessages,
               temperature: 0.7,
               max_tokens: 1024,
@@ -82,7 +93,7 @@ export async function POST(request: NextRequest) {
         if (aiMessage) {
           return NextResponse.json({
             message: aiMessage,
-            model: model || 'llama-3.3-70b-versatile',
+            model: selectedGroqModel,
             provider: 'groq',
           })
         }
