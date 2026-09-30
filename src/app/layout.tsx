@@ -20,7 +20,8 @@ export const metadata: Metadata = {
   keywords: ["VisionFlow AI", "AI automation", "CRM", "lead generation", "business operating system", "AI agents", "sales automation"],
   authors: [{ name: "VisionFlow AI" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/favicon_visionflow_space_z_ai_32x32-bqYGXju5bcyNGufSllPT9wrRopVDkr.png",
+    shortcut: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/favicon_visionflow_space_z_ai_32x32-bqYGXju5bcyNGufSllPT9wrRopVDkr.png",
   },
 };
 

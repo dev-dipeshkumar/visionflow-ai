@@ -167,11 +167,11 @@ interface AICommand {
 // Data
 // ---------------------------------------------------------------------------
 
-const AI_MODELS = [
-  { id: 'gpt4', name: 'GPT-4', badge: 'Most Capable' },
-  { id: 'gpt4-turbo', name: 'GPT-4 Turbo', badge: 'Fast' },
-  { id: 'claude-3', name: 'Claude 3 Opus', badge: 'Reasoning' },
-]
+  const AI_MODELS = [
+  { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', badge: 'Recommended' },
+  { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', badge: 'Fast' },
+  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', badge: 'Reliable' },
+  ]
 
 const promptTemplates: PromptTemplate[] = [
   {
@@ -703,7 +703,7 @@ export function ChatPage() {
   const [showCommands, setShowCommands] = useState(false)
   const [commandFilter, setCommandFilter] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
-  const [selectedModel, setSelectedModel] = useState('gpt4')
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-oss-120b')
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPlusModal, setShowPlusModal] = useState(false)
 
